@@ -74,3 +74,15 @@ export function itemName(item) {
 export function itemLogo(item) {
   return item.stream_icon ?? item.cover ?? item.logo ?? ''
 }
+
+// Entrega las imágenes (íconos/posters) a través de nuestro servidor para que
+// no las bloquee el navegador por contenido mixto (web HTTPS vs. proveedor HTTP).
+export function imgProxy(u = '') {
+  if (!u) return ''
+  if (u.startsWith('/') || u.startsWith('blob:') || u.startsWith('data:')) return u
+  try {
+    const p = new URL(u)
+    if (p.protocol === 'http:' || p.protocol === 'https:') return `/api/rt/img?u=${encodeURIComponent(u)}`
+  } catch {}
+  return u
+}

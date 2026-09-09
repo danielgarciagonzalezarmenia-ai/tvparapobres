@@ -3,6 +3,8 @@ import cors from 'cors'
 import path from 'node:path'
 import fs from 'node:fs'
 import { spawn } from 'node:child_process'
+import http from 'node:http'
+import https from 'node:https'
 import { fileURLToPath } from 'node:url'
 import ffmpegPath from 'ffmpeg-static'
 import * as xt from './xtream.js'
@@ -45,7 +47,66 @@ app.get('/api/all-live', wrap(async (req, res) => res.json(await xt.getAllLiveSt
 app.get('/api/all-vod', wrap(async (req, res) => res.json(await xt.getAllVod())))
 app.get('/api/all-series', wrap(async (req, res) => res.json(await xt.getAllSeries())))
 
-app.get('/api/url/live/:id', wrap(async (req, res) => res.json({ url: xt.liveUrl(num(req.params.id)) })))
+// Pasa por nuestro servidor el contenido HTTP del proveedor para evitar
+// bloqueo por "contenido mixto" (nuestra web va por HTTPS, el proveedor es HTTP).
+function pipeUpstream(srcUrl, req, res, depth = 0) {
+  let u
+  try { u = new URL(srcUrl) } catch { if (!res.headersSent) res.status(502).end(); return }
+  if (depth > 6) { if (!res.headersSent) res.status(502).end(); return }
+  const lib = u.protocol === 'https:' ? https : http
+  const headers = {}
+  if (req.headers.range) headers.Range = req.headers.range
+  headers['User-Agent'] = 'Mozilla/5.0'
+  headers.Accept = '*/*'
+  const preq = lib.request(u, { method: 'GET', headers }, (up) => {
+    const sc = up.statusCode || 0
+    if (sc >= 300 && sc < 400 && up.headers.location) {
+      up.resume()
+      let next = null
+      try { next = new URL(up.headers.location, srcUrl).href } catch {}
+      // Al redirigir se descarta la cabecera Range (no todos los CDN la aceptan).
+      const headers2 = { 'User-Agent': 'Mozilla/5.0', Accept: '*/*' }
+      if (next) return pipeUpstream(next, { ...req, headers: headers2 }, res, depth + 1)
+      if (!res.headersSent) res.status(502).end()
+      return
+    }
+    res.statusCode = sc
+    for (const h of ['content-type', 'content-length', 'accept-ranges', 'content-range', 'transfer-encoding', 'cache-control']) {
+      const v = up.headers[h]
+      if (v !== undefined) res.setHeader(h, v)
+    }
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    up.pipe(res)
+    res.on('close', () => up.destroy())
+  })
+  preq.on('error', () => { if (!res.writableEnded) res.destroy() })
+  preq.end()
+}
+
+app.get('/api/rt/live/:id', (req, res) => {
+  const id = String(req.params.id).replace(/[^0-9]/g, '')
+  if (!id) return res.status(400).json({ error: 'ID inválido' })
+  res.set('Content-Type', 'video/mp2t')
+  res.set('Cache-Control', 'no-store')
+  pipeUpstream(`${xt.SERVER}/${xt.USER}/${xt.PASS}/${id}`, req, res)
+})
+
+app.get('/api/rt/img', (req, res) => {
+  const u = String(req.query.u || '')
+  try {
+    const p = new URL(u)
+    if (p.protocol !== 'http:' && p.protocol !== 'https:') return res.status(400).json({ error: 'URL inválida' })
+  } catch { return res.status(400).json({ error: 'URL inválida' }) }
+  res.set('Content-Type', 'image/jpeg')
+  res.set('Cache-Control', 'public, max-age=86400')
+  pipeUpstream(u, req, res)
+})
+
+app.get('/api/url/live/:id', wrap(async (req, res) => {
+  const id = String(req.params.id).replace(/[^0-9]/g, '')
+  if (!id) return res.status(400).json({ error: 'ID inválido' })
+  res.json({ url: `/api/rt/live/${id}` })
+}))
 app.get('/api/url/vod/:id/:ext?', wrap(async (req, res) =>
   res.json({ url: xt.vodUrl(num(req.params.id), req.params.ext) })))
 app.get('/api/url/series/:id', wrap(async (req, res) => res.json({ url: xt.seriesUrl(num(req.params.id)) })))

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { api, itemId, itemName, itemLogo, cleanName, fmtTime, NATIVE_EXTS } from './api.js'
+import { api, itemId, itemName, itemLogo, imgProxy, cleanName, fmtTime, NATIVE_EXTS } from './api.js'
 import { attachPlayer, playURL, stopPlayback, getPlaybackState, onPlayerEvent } from './player.js'
 
 const TABS = {
@@ -498,7 +498,7 @@ export default function App() {
                   <button key={h.key} className="card hcard" onClick={() => resumeEntry(h)}>
                     <span className="cardlogo">
                       {h.logo ? (
-                        <img src={h.logo} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                        <img src={imgProxy(h.logo)} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                       ) : null}
                     </span>
                     <span className="cardname">{h.name}</span>
@@ -545,7 +545,7 @@ export default function App() {
                   </span>
                   <span className="cardlogo">
                     {itemLogo(item) ? (
-                      <img src={itemLogo(item)} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                      <img src={imgProxy(itemLogo(item))} alt="" loading="lazy" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     ) : null}
                   </span>
                   <span className="cardname">{itemName(item)}</span>
@@ -602,7 +602,7 @@ function SeriesModal({ info, onClose, onPlay, current }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <button className="modalclose" onClick={onClose}>✕</button>
         <div className="modalhead">
-          <img className="poster" src={meta.cover || meta.poster || info._logo} alt="" onError={(e) => (e.currentTarget.style.display = 'none')} />
+          <img className="poster" src={imgProxy(meta.cover || meta.poster || info._logo)} alt="" onError={(e) => (e.currentTarget.style.display = 'none')} />
           <div className="modalmeta">
             <h2>{cleanName(meta.name) || info._name}</h2>
             <div className="meta-row">
