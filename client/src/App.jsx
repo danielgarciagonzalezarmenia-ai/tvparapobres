@@ -74,7 +74,7 @@ export default function App() {
   const [showHist, setShowHist] = useState(false)
   const [playState, setPlayState] = useState('idle')
   const [playMsg, setPlayMsg] = useState('')
-  const [castAvail, setCastAvail] = useState(false)
+  
   const [error, setError] = useState('')
   const [modal, setModal] = useState(null)
   const videoRef = useRef(null)
@@ -108,7 +108,7 @@ export default function App() {
   }, [current])
 
   useEffect(() => {
-    ensureCast().then(setCastAvail).catch(() => setCastAvail(false))
+    ensureCast().catch(() => {})
   }, [])
 
   useEffect(
@@ -444,18 +444,16 @@ export default function App() {
                 </span>
                 <div className="ptitle">{current.name}</div>
                 <div className="pactions">
-                  {castAvail && (
-                    <button
-                      className="castbtn"
-                      title="Enviar al TV (Chromecast)"
-                      onClick={() =>
-                        castMedia(current.url, current.name)
-                          .catch((e) => setError(e.message))
-                      }
-                    >
-                      📺
-                    </button>
-                  )}
+                  <button
+                    className="castbtn"
+                    title="Enviar al TV (Chromecast)"
+                    onClick={() =>
+                      castMedia(current.url, current.name)
+                        .catch((e) => setError(e.message))
+                    }
+                  >
+                    📺
+                  </button>
                   <button
                     className="fsbtn"
                     title="Pantalla completa"
