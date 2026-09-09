@@ -176,10 +176,8 @@ main { flex: 1; overflow-y: auto; padding: 18px 22px; min-width: 0; }
 
 .ptitle { font-size: 1rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.pactions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.pactions .fsbtn { margin-left: 0; }
+.fsbtn { margin-left: auto; }
 .fsbtn:hover { border-color: var(--accent); }
-.castbtn:hover { border-color: var(--accent); }
 
 .player {
   position: relative; aspect-ratio: 16 / 9; background: #000; border-radius: 1rem;
@@ -192,8 +190,7 @@ main { flex: 1; overflow-y: auto; padding: 18px 22px; min-width: 0; }
   position: absolute; inset: 0; z-index: 2;
   display: flex; flex-direction: column; gap: 12px;
   align-items: center; justify-content: center;
-  background: rgba(0, 0, 0, 0.42);
-  pointer-events: none;
+  background: #000;
   border-radius: 1rem;
 }
 .overlay.err { color: #e8e6ee; }
