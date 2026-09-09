@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, itemId, itemName, itemLogo, imgProxy, cleanName, fmtTime, NATIVE_EXTS } from './api.js'
 import { attachPlayer, playURL, stopPlayback, getPlaybackState, onPlayerEvent } from './player.js'
+import { ensureCast, castMedia } from './cast.js'
 
 const TABS = {
   live: { label: 'LIVE', sub: 'Canales', loadCats: api.liveCategories, loadItems: api.liveStreams, all: api.liveAll },
@@ -73,6 +74,7 @@ export default function App() {
   const [showHist, setShowHist] = useState(false)
   const [playState, setPlayState] = useState('idle')
   const [playMsg, setPlayMsg] = useState('')
+  const [castAvail, setCastAvail] = useState(false)
   const [error, setError] = useState('')
   const [modal, setModal] = useState(null)
   const videoRef = useRef(null)
@@ -104,6 +106,10 @@ export default function App() {
     lastUrl.current = current.url
     playURL(current.url, { start: current.start || 0 })
   }, [current])
+
+  useEffect(() => {
+    ensureCast().then(setCastAvail).catch(() => setCastAvail(false))
+  }, [])
 
   useEffect(
     () =>
@@ -437,13 +443,27 @@ export default function App() {
                   <span className="pulse" /> {current.isLive ? 'EN VIVO' : 'REPRODUCIENDO'}
                 </span>
                 <div className="ptitle">{current.name}</div>
-                <button
-                  className="fsbtn"
-                  title="Pantalla completa"
-                  onClick={() => videoRef.current?.requestFullscreen()}
-                >
-                  ⛶
-                </button>
+                <div className="pactions">
+                  {castAvail && (
+                    <button
+                      className="castbtn"
+                      title="Enviar al TV (Chromecast)"
+                      onClick={() =>
+                        castMedia(current.url, current.name)
+                          .catch((e) => setError(e.message))
+                      }
+                    >
+                      📺
+                    </button>
+                  )}
+                  <button
+                    className="fsbtn"
+                    title="Pantalla completa"
+                    onClick={() => videoRef.current?.requestFullscreen()}
+                  >
+                    ⛶
+                  </button>
+                </div>
               </div>
               <div className="player">
                 <video ref={videoRef} controls playsInline {...videoHandlers} />
