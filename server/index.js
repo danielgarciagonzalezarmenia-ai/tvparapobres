@@ -168,10 +168,17 @@ app.get('/api/stream/:kind/:id/:ext', (req, res) => {
     child.on('exit', (code) => {
       cleanup()
       if (res.writableEnded || res.destroyed) return
-      if (!res.headersSent) {
-        console.error(`[ffmpeg] "${bin}" exit ${code} stderr:`, errBuf || '(vacío)')
-        res.status(502).json({ error: 'No se pudo iniciar el video', detail: errBuf })
-      } else res.end()
+      if (res.headersSent) { res.end(); return }
+      if (code === null && attempt + 1 < unique.length) {
+        // Murió por señal (binario incompatible / matado). Probar el siguiente.
+        errBuf = ''
+        attempt++
+        console.error(`[ffmpeg] "${bin}" fue matado (code=null); probando "${unique[attempt]}"`)
+        startChild()
+        return
+      }
+      console.error(`[ffmpeg] "${bin}" exit ${code} stderr:`, errBuf || '(vacío)')
+      res.status(502).json({ error: 'No se pudo iniciar el video', detail: errBuf })
     })
     req.on('close', onReqClose)
   }
