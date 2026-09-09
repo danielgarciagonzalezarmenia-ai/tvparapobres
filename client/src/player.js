@@ -12,7 +12,10 @@ let gotPlay = false
 let timedOut = false
 const MAX_RETRIES = 4
 const CONNECT_TIMEOUT_MS = 30000
+const STALL_TIMEOUT_MS = 6000
+const STALL_POLL_MS = 2000
 const listeners = new Set()
+let stallWatcher = null
 
 const emit = (e) => listeners.forEach((fn) => fn(e))
 
@@ -35,6 +38,45 @@ const clearConnectTimer = () => {
 const markPlayed = () => {
   gotPlay = true
   clearConnectTimer()
+  startStallWatcher()
+}
+
+function clearStallWatcher() {
+  if (stallWatcher) {
+    clearInterval(stallWatcher.timer)
+    if (stallWatcher.video && stallWatcher.onTu) stallWatcher.video.removeEventListener('timeupdate', stallWatcher.onTu)
+    stallWatcher = null
+  }
+}
+
+function startStallWatcher() {
+  clearStallWatcher()
+  if (!video) return
+  let lastProgress = Date.now()
+  const onTu = () => { lastProgress = Date.now() }
+  video.addEventListener('timeupdate', onTu)
+  const timer = setInterval(() => {
+    if (!video || !currentUrl || !gotPlay || video.paused || video.seeking) return
+    if (Date.now() - lastProgress < STALL_TIMEOUT_MS) return
+    restartPlayback('sin señal')
+  }, STALL_POLL_MS)
+  stallWatcher = { timer, video, onTu }
+}
+
+function restartPlayback(_why) {
+  clearStallWatcher()
+  clearConnectTimer()
+  if (reconnectTries > 6) reconnectTries = 6
+  reconnectTries++
+  emit({ type: 'notice', message: `Reconectando (${reconnectTries})…` })
+  const wait = Math.min(1500 + reconnectTries * 1000, 9000)
+  setTimeout(() => {
+    if (!currentUrl || !video) return
+    try { mp?.destroy() } catch { /* noop */ }
+    mp = null
+    gotPlay = false
+    startMse(currentUrl)
+  }, wait)
 }
 
 const armConnectTimeout = () => {
@@ -60,6 +102,7 @@ const armConnectTimeout = () => {
 
 export function stopPlayback() {
   clearConnectTimer()
+  clearStallWatcher()
   gotPlay = false
   timedOut = false
   try { mp?.destroy() } catch { /* noop */ }
@@ -105,16 +148,8 @@ function startMse(url, isLive = true) {
 
   mp.on(mpegts.Events.ERROR, (_type, data) => {
     emit({ type: 'error', message: 'Error de transmisión', data })
-    if (reconnectTries >= MAX_RETRIES || !currentUrl || !video) return
-    reconnectTries++
-    emit({ type: 'notice', message: `Reconectando (${reconnectTries}/${MAX_RETRIES})…` })
-    const wait = reconnectTries * 1500
-    setTimeout(() => {
-      if (!currentUrl || !video) return
-      try { mp?.destroy() } catch { /* noop */ }
-      mp = null
-      startMse(currentUrl)
-    }, wait)
+    if (!currentUrl || !video) return
+    restartPlayback('error')
   })
 
   mp.attachMediaElement(video)
