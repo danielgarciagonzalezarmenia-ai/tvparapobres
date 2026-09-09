@@ -143,30 +143,39 @@ app.get('/api/stream/:kind/:id/:ext', (req, res) => {
     '-f', 'mpegts', 'pipe:1'
   )
 
-  const bin = ffmpegPath && fs.existsSync(ffmpegPath) ? ffmpegPath : 'ffmpeg'
-  const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+  const candidates = []
+  if (ffmpegPath && fs.existsSync(ffmpegPath)) candidates.push(ffmpegPath)
+  candidates.push('ffmpeg')
+  candidates.push('/usr/bin/ffmpeg')
+  const unique = [...new Set(candidates)]
+
   let errBuf = ''
-  child.stdout.on('data', (d) => {
-    if (!res.destroyed) res.write(d)
-  })
-  child.stderr.on('data', (d) => {
-    errBuf = (errBuf + d.toString()).slice(-500)
-  })
-  child.on('error', (e) => {
-    console.error('[ffmpeg] spawn error:', e.message)
-    if (!res.destroyed) res.destroy()
-  })
-  child.on('exit', (code) => {
-    if (!res.destroyed && !res.writableEnded) {
+  let attempt = 0
+  const startChild = () => {
+    const bin = unique[attempt]
+    const cleanup = () => { req.removeListener('close', onReqClose) }
+    const onReqClose = () => { if (!res.writableEnded) { try { child.kill('SIGKILL') } catch {} } }
+    const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    child.stdout.on('data', (d) => { if (!res.destroyed) res.write(d) })
+    child.stderr.on('data', (d) => { errBuf = (errBuf + d.toString()).slice(-600) })
+    child.on('error', (e) => {
+      console.error(`[ffmpeg] "${bin}" spawn error:`, e.message)
+      cleanup()
+      attempt++
+      if (attempt < unique.length) startChild()
+      else if (!res.headersSent) res.status(502).json({ error: 'No se pudo iniciar el video (ffmpeg no disponible)', detail: errBuf })
+    })
+    child.on('exit', (code) => {
+      cleanup()
+      if (res.writableEnded || res.destroyed) return
       if (!res.headersSent) {
-        console.error(`[ffmpeg] exit ${code} stderr:`, errBuf || '(vacío)')
+        console.error(`[ffmpeg] "${bin}" exit ${code} stderr:`, errBuf || '(vacío)')
         res.status(502).json({ error: 'No se pudo iniciar el video', detail: errBuf })
       } else res.end()
-    }
-  })
-  req.on('close', () => {
-    if (!res.writableEnded) child.kill('SIGKILL')
-  })
+    })
+    req.on('close', onReqClose)
+  }
+  startChild()
 })
 
 if (fs.existsSync(DIST)) {
