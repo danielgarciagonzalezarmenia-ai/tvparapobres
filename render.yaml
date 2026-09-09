@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: tv-para-pobres
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: XTREAM_SERVER
+        sync: false
+      - key: XTREAM_USERNAME
+        sync: false
+      - key: XTREAM_PASSWORD
+        sync: false
+      - key: XTREAM_EXPIRE
+        sync: false
+        value: "2026-09-21"
