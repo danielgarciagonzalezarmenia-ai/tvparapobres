@@ -143,7 +143,8 @@ app.get('/api/stream/:kind/:id/:ext', (req, res) => {
     '-f', 'mpegts', 'pipe:1'
   )
 
-  const child = spawn(ffmpegPath, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+  const bin = ffmpegPath && fs.existsSync(ffmpegPath) ? ffmpegPath : 'ffmpeg'
+  const child = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
   let errBuf = ''
   child.stdout.on('data', (d) => {
     if (!res.destroyed) res.write(d)
@@ -151,13 +152,16 @@ app.get('/api/stream/:kind/:id/:ext', (req, res) => {
   child.stderr.on('data', (d) => {
     errBuf = (errBuf + d.toString()).slice(-500)
   })
-  child.on('error', () => {
+  child.on('error', (e) => {
+    console.error('[ffmpeg] spawn error:', e.message)
     if (!res.destroyed) res.destroy()
   })
-  child.on('exit', () => {
+  child.on('exit', (code) => {
     if (!res.destroyed && !res.writableEnded) {
-      if (!res.headersSent) res.status(502).json({ error: 'No se pudo iniciar la sinopsis de video', detail: errBuf })
-      else res.end()
+      if (!res.headersSent) {
+        console.error(`[ffmpeg] exit ${code} stderr:`, errBuf || '(vacío)')
+        res.status(502).json({ error: 'No se pudo iniciar el video', detail: errBuf })
+      } else res.end()
     }
   })
   req.on('close', () => {
