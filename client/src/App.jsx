@@ -10,6 +10,8 @@ const TABS = {
 
 const ALL_CAT = { category_id: '__all__', category_name: 'Todos', __all__: true }
 
+const isMobile = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent)
+
 const FAV_KEY = 'tvp_favs'
 const HIST_KEY = 'tvp_hist'
 const MAX_HIST = 120
@@ -82,6 +84,7 @@ export default function App() {
   const histRef = useRef(hist)
   const currentRef = useRef(current)
   const lastSaveRef = useRef(0)
+  const autoFsRef = useRef(false)
 
   useEffect(() => { currentRef.current = current }, [current])
 
@@ -103,6 +106,7 @@ export default function App() {
   useEffect(() => {
     if (!current?.url || current.url === lastUrl.current) return
     lastUrl.current = current.url
+    autoFsRef.current = false
     playURL(current.url, { start: current.start || 0 })
   }, [current])
 
@@ -324,7 +328,17 @@ export default function App() {
   }
 
   const videoHandlers = {
-    onPlaying: () => setPlayState('playing'),
+    onPlaying: () => {
+      setPlayState('playing')
+      if (isMobile && !autoFsRef.current) {
+        autoFsRef.current = true
+        try {
+          const v = videoRef.current
+          if (v?.requestFullscreen) { const p = v.requestFullscreen(); if (p && p.catch) p.catch(() => {}) }
+          else if (v?.webkitEnterFullscreen) v.webkitEnterFullscreen()
+        } catch { /* noop */ }
+      }
+    },
     onWaiting: () => setPlayState('connecting'),
     onStalled: () => setPlayState('connecting'),
     onPause: () => persistPos(),
