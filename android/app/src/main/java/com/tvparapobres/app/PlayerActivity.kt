@@ -2,6 +2,8 @@ package com.tvparapobres.app
 
 import android.net.Uri
 import android.os.Bundle
+import android.os.PowerManager
+import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.exoplayer2.ExoPlayer
@@ -10,7 +12,6 @@ import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
-import org.json.JSONObject
 
 class PlayerActivity : AppCompatActivity() {
 
@@ -18,10 +19,17 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var playerView: PlayerView
     private var histKey: String? = null
     private var startPos: Long = 0
+    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_player)
+
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "tvpp:playback")
+        wakeLock?.acquire(4 * 60 * 60 * 1000L)
 
         HistoryManager.init(applicationContext)
 
@@ -75,6 +83,8 @@ class PlayerActivity : AppCompatActivity() {
         super.onDestroy()
         player?.release()
         player = null
+        try { wakeLock?.release() } catch (_: Exception) {}
+        wakeLock = null
     }
 
     private fun savePos() {
