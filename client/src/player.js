@@ -190,7 +190,7 @@ export async function playURL(url, opts = {}) {
     return
   }
 
-  if (/\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(low)) {
+  if (/\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(low) || low.includes('/api/rt/vod/') || low.includes('/api/rt/series/')) {
     video.src = url
     emit({ type: 'connecting' })
     armConnectTimeout()

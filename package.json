@@ -40,7 +40,8 @@
     "files": [
       "desktop/**/*",
       "server/**/*",
-      "client/dist/**/*"
+      "client/dist/**/*",
+      "client/landing/**/*"
     ],
     "asar": true,
     "asarUnpack": [

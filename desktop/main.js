@@ -52,7 +52,7 @@ async function createWindow() {
     if (/^https?:/.test(url)) shell.openExternal(url)
   })
 
-  await win.loadURL(`http://127.0.0.1:${PORT}`)
+  await win.loadURL(`http://127.0.0.1:${PORT}/app`)
 }
 
 app.whenReady().then(async () => {

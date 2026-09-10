@@ -11,6 +11,7 @@ import * as xt from './xtream.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DIST = path.join(__dirname, '..', 'client', 'dist')
+const LANDING = path.join(__dirname, '..', 'client', 'landing')
 
 const app = express()
 app.use(cors())
@@ -64,17 +65,22 @@ function pipeUpstream(srcUrl, req, res, depth = 0) {
       up.resume()
       let next = null
       try { next = new URL(up.headers.location, srcUrl).href } catch {}
-      // Al redirigir se descarta la cabecera Range (no todos los CDN la aceptan).
+      // Se conserva Range al redirigir: el CDN del proveedor sí responde 206.
       const headers2 = { 'User-Agent': 'Mozilla/5.0', Accept: '*/*' }
+      if (req.headers.range) headers2.range = req.headers.range
       if (next) return pipeUpstream(next, { ...req, headers: headers2 }, res, depth + 1)
       if (!res.headersSent) res.status(502).end()
       return
     }
-    res.statusCode = sc
-    for (const h of ['content-type', 'content-length', 'accept-ranges', 'content-range', 'transfer-encoding', 'cache-control']) {
+    // Algunos nodos del proveedor responden rango (Content-Range) pero con status
+    // 200 en vez de 206; el navegador aborta esa respuesta. Lo normalizamos.
+    const hasCtr = !!up.headers['content-range']
+    res.statusCode = sc === 200 && hasCtr ? 206 : sc
+    for (const h of ['content-type', 'content-length', 'accept-ranges', 'transfer-encoding', 'cache-control']) {
       const v = up.headers[h]
       if (v !== undefined) res.setHeader(h, v)
     }
+    if (sc >= 200 && sc < 300 && up.headers['content-range']) res.setHeader('content-range', up.headers['content-range'])
     res.setHeader('Access-Control-Allow-Origin', '*')
     up.pipe(res)
     res.on('close', () => up.destroy())
@@ -90,6 +96,26 @@ app.get('/api/rt/live/:id', (req, res) => {
   res.set('Content-Type', 'video/mp2t')
   res.set('Cache-Control', 'no-store')
   pipeUpstream(`${xt.SERVER}/${user}/${pass}/${id}`, req, res)
+})
+
+// Películas/series reproducidas por <video> nativo: se proxyan tal cual desde el
+// proveedor (mp4 con soporte Range) en lugar de reempaquetar con ffmpeg.
+app.get('/api/rt/vod/:id/:ext', (req, res) => {
+  const id = String(req.params.id).replace(/[^0-9]/g, '')
+  const ext = String(req.params.ext).replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toLowerCase() || 'mp4'
+  if (!id) return res.status(400).json({ error: 'ID inválido' })
+  const { user, pass } = xt.nextUser()
+  res.set('Cache-Control', 'no-store')
+  pipeUpstream(`${xt.SERVER}/movie/${user}/${pass}/${id}.${ext}`, req, res)
+})
+
+app.get('/api/rt/series/:id/:ext', (req, res) => {
+  const id = String(req.params.id).replace(/[^0-9]/g, '')
+  const ext = String(req.params.ext).replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toLowerCase() || 'mp4'
+  if (!id) return res.status(400).json({ error: 'ID inválido' })
+  const { user, pass } = xt.nextUser()
+  res.set('Cache-Control', 'no-store')
+  pipeUpstream(`${xt.SERVER}/series/${user}/${pass}/${id}.${ext}`, req, res)
 })
 
 // --- Caché de imágenes en disco: evita repetir solicitudes al proveedor. ---
@@ -249,11 +275,21 @@ app.get('/api/stream/:kind/:id/:ext', (req, res) => {
 })
 
 if (fs.existsSync(DIST)) {
-  app.use(express.static(DIST))
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) return next()
+  // Landing page: solo la intro + botones de descarga.
+  if (fs.existsSync(LANDING)) app.use('/landing', express.static(LANDING))
+  // Archivos de descarga (.exe / .apk) accesibles públicamente.
+  const RELEASE = path.join(__dirname, '..', 'release')
+  if (fs.existsSync(RELEASE)) app.use('/release', express.static(RELEASE))
+  // La app completa se sirve bajo /app (evita que la web muestre el reproductor).
+  app.use('/app', express.static(DIST))
+  app.get('/app*', (req, res) => {
+    if (req.path.startsWith('/api')) return res.status(404).end()
     res.sendFile(path.join(DIST, 'index.html'))
   })
+  // La ruta raíz muestra la landing.
+  if (fs.existsSync(LANDING)) {
+    app.get('/', (req, res) => res.sendFile(path.join(LANDING, 'index.html')))
+  }
 }
 
 const port = Number(process.env.PORT) || 4000
