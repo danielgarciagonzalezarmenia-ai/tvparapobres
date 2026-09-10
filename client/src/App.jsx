@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { api, itemId, itemName, itemLogo, imgProxy, cleanName, fmtTime, NATIVE_EXTS } from './api.js'
+import { api, isServiceDown, itemId, itemName, itemLogo, imgProxy, cleanName, fmtTime, NATIVE_EXTS } from './api.js'
 import { attachPlayer, playURL, stopPlayback, getPlaybackState, onPlayerEvent } from './player.js'
 
 const TABS = {
@@ -78,6 +78,7 @@ export default function App() {
   
   const [error, setError] = useState('')
   const [modal, setModal] = useState(null)
+  const [serviceDown, setServiceDown] = useState(false)
   const videoRef = useRef(null)
   const wrapRef = useRef(null)
   const lastUrl = useRef(null)
@@ -93,6 +94,29 @@ export default function App() {
       .then((m) => { if (m && m.expire) setExpired(todayStr() >= String(m.expire).slice(0, 10)) })
       .catch(() => {})
   }, [])
+
+  // Vigila que el backend (la PC) esté online. Si se cae, muestra la pantalla
+  // completa de "Sin servicio"; cuando vuelve, refresca el catálogo.
+  useEffect(() => {
+    let stopped = false
+    const check = async (first = false) => {
+      if (stopped) return
+      try {
+        await api.meta()
+        if (stopped) return
+        if (serviceDown) {
+          setServiceDown(false)
+          if (!first) refreshCats()
+        }
+      } catch (e) {
+        if (stopped) return
+        if (isServiceDown(e)) setServiceDown(true)
+      }
+    }
+    check(true)
+    const id = setInterval(() => check(), 15000)
+    return () => { stopped = true; clearInterval(id) }
+  }, [serviceDown])
 
   useEffect(() => { histRef.current = hist }, [hist])
 
@@ -575,6 +599,19 @@ export default function App() {
 
       {modal && (
         <SeriesModal info={modal} onClose={() => setModal(null)} onPlay={playEpisode} current={current} />
+      )}
+
+      {serviceDown && (
+        <div className="servlock">
+          <div className="serv-icon">📡</div>
+          <div className="serv-brand" />
+          <div className="serv-ring" />
+          <div className="serv-title">Sin servicio por el momento</div>
+          <div className="serv-sub">
+            Nuestro equipo está realizando mantenimiento. El contenido volverá a estar disponible en unos minutos. ¡Gracias por tu paciencia!
+          </div>
+          <div className="serv-hint">Reintentando automáticamente en unos segundos…</div>
+        </div>
       )}
 
       {expired && (

@@ -3,16 +3,10 @@ services:
     name: tv-para-pobres
     runtime: node
     plan: free
-    buildCommand: apt-get update && apt-get install -y ffmpeg && npm install && npm run build
-    startCommand: node server/index.js
+    buildCommand: npm install && npm run build
+    startCommand: node server/proxy.js
     healthCheckPath: /health
     envVars:
-      - key: XTREAM_SERVER
+      - key: PC_BACKEND_URL
         sync: false
-      - key: XTREAM_USERNAME
-        sync: false
-      - key: XTREAM_PASSWORD
-        sync: false
-      - key: XTREAM_EXPIRE
-        sync: false
-        value: "2026-09-21"
+        value: ""

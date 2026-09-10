@@ -1,9 +1,19 @@
 const j = async (r) => {
   if (!r.ok) {
     const body = await r.json().catch(() => ({}))
-    throw new Error(body.error || `HTTP ${r.status}`)
+    const err = new Error(body.error || `HTTP ${r.status}`)
+    err.status = r.status
+    throw err
   }
   return r.json()
+}
+
+// Se considera "servicio caído" cuando el backend (la PC del dueño, vía Tailscale)
+// no responde: 502/503/504 del proxy de Render o fallo de red directo.
+export function isServiceDown(err) {
+  if (!err) return false
+  if (err.name === 'TypeError') return true
+  return err.status === 502 || err.status === 503 || err.status === 504
 }
 
 const get = (url) => fetch(url).then(j)

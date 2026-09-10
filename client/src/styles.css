@@ -295,11 +295,15 @@ aside .spinner { margin: 20px auto; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 16px; padding: 24px; text-align: center;
 }
+.serv-icon {
+  font-size: 3rem; line-height: 1;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 18px rgba(255, 77, 46, 0.35));
+}
 .serv-brand {
   width: 46px; height: 46px; border-radius: 12px;
   background: var(--accent);
   box-shadow: 0 0 26px rgba(255, 77, 46, 0.5);
-  margin-bottom: 8px;
 }
 .serv-ring {
   width: 64px; height: 64px; border-radius: 50%;
@@ -308,6 +312,7 @@ aside .spinner { margin: 20px auto; }
 }
 .serv-title { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.05em; }
 .serv-sub { color: var(--muted); max-width: 420px; font-size: 0.92rem; line-height: 1.55; }
+.serv-hint { font-size: 0.8rem; color: rgba(255, 255, 255, 0.35); }
 
 /* ---------- Toast ---------- */
 .toast {

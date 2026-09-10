@@ -3,3 +3,5 @@ dist
 .env
 *.log
 server/.cache
+*.msi
+server/.imgcache
