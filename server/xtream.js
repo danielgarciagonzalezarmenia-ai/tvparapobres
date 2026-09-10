@@ -20,7 +20,7 @@ const API_BASE = `${SERVER}/player_api.php`
 const TIMEOUT_MS = 60000
 const RETRIES = 3
 
-// --- Rotación de usuarios ---
+// --- Rotación de usuarios con salto de cuentas fallidas ---
 // Prioridad: variable de entorno XTREAM_USERS (si viene bien formada) > cuentas del código.
 let users = DEFAULT_USERS
 try {
@@ -32,12 +32,31 @@ try {
 } catch {}
 if (users.length === 0) users = [{ user: USER, pass: PASS }]
 let _idx = 0
-export function nextUser() {
-  const u = users[_idx % users.length]
+const penalty = new Map() // user -> ms hasta la que está penalizada
+
+function penalize(u, ms) {
+  penalty.set(u, Date.now() + ms)
+}
+
+export function nextUser(skipPenalized = true) {
+  const n = users.length
+  for (let i = 0; i < n; i++) {
+    const u = users[(_idx + i) % n]
+    if (!skipPenalized || (penalty.get(u.user) || 0) <= Date.now()) {
+      _idx = (_idx + i + 1) % n
+      return u
+    }
+  }
+  const u = users[_idx % n]
   _idx++
   return u
 }
 export const userCount = users.length
+
+// Penaliza una cuenta tras fallar: caída (404), bloqueada (401/403/429) o problema de red.
+export function markUserFailure(u) {
+  if (u) penalize(u.user, 15 * 60 * 1000)
+}
 
 const cache = new Map()
 const inflight = new Map()
@@ -104,7 +123,9 @@ async function fetchRaw(url) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) })
       if (res.ok) return res.json()
-      throw new Error(`API Xtream: HTTP ${res.status}`)
+      const e = new Error(`API Xtream: HTTP ${res.status}`)
+      e.status = res.status
+      throw e
     } catch (e) {
       if (i === RETRIES - 1) throw e
       await new Promise((r) => setTimeout(r, 800 * (i + 1)))
@@ -112,16 +133,14 @@ async function fetchRaw(url) {
   }
 }
 
+// Cuentas que el proveedor rechaza explícitamente (caída/caducada/bloqueada).
+const BAD_STATUS = new Set([400, 401, 403, 404, 429])
+
 async function get(action = '', params = {}, ttl = 15 * 60 * 1000) {
   const key = `${action}|${JSON.stringify(params)}`
   const hit = cache.get(key)
 
   if (hit && Date.now() - hit.ts < ttl) return hit.data
-
-  const { user, pass } = nextUser()
-  const qs = new URLSearchParams({ username: user, password: pass, ...(action ? { action } : {}) })
-  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') qs.set(k, v)
-  const url = `${API_BASE}?${qs}`
   const filePath = diskPath(key)
 
   // Caché en disco (sobrevive reinicios del server).
@@ -136,20 +155,36 @@ async function get(action = '', params = {}, ttl = 15 * 60 * 1000) {
   if (inflight.has(key)) return inflight.get(key)
 
   const p = (async () => {
-    try {
-      const data = await fetchRaw(url)
-      const ts = Date.now()
-      cache.set(key, { data, ts })
-      writeDisk(filePath, ts, data)
-      return data
-    } catch (e) {
-      const stale = cache.get(key) || await readDisk(filePath)
-      if (stale) {
-        cache.set(key, { data: stale.data, ts: Date.now() })
-        return stale.data
+    // Reintenta con hasta 3 cuentas distintas si la primera falla o está caída.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const acc = nextUser()
+      const qs = new URLSearchParams({ username: acc.user, password: acc.pass, ...(action ? { action } : {}) })
+      for (const [k2, v2] of Object.entries(params)) if (v2 !== undefined && v2 !== '') qs.set(k2, v2)
+      const url = `${API_BASE}?${qs}`
+      try {
+        const data = await fetchRaw(url)
+        const ts = Date.now()
+        cache.set(key, { data, ts })
+        writeDisk(filePath, ts, data)
+        return data
+      } catch (e) {
+        if (BAD_STATUS.has(e.status)) {
+          markUserFailure(acc) // cuenta caída/bloqueada: sáltala un tiempo
+          if (attempt < 2) continue // prueba otra cuenta
+        } else {
+          // Problema de red general: probar con otra cuenta también.
+          markUserFailure(acc)
+          if (attempt < 2) continue
+        }
+        break
       }
-      throw new Error(`No se pudo conectar al servidor Xtream (${SERVER})`)
     }
+    const stale = cache.get(key) || await readDisk(filePath)
+    if (stale) {
+      cache.set(key, { data: stale.data, ts: Date.now() })
+      return stale.data
+    }
+    throw new Error(`No se pudo conectar al servidor Xtream (${SERVER})`)
   })()
 
   inflight.set(key, p)
