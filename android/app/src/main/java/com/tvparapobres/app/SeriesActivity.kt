@@ -76,6 +76,14 @@ class SeriesActivity : AppCompatActivity() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
             val tv = layoutInflater.inflate(R.layout.item_episode, parent, false) as TextView
+            if (isTvDevice(this@SeriesActivity)) {
+                tv.isFocusable = true
+                tv.foreground = tv.context.getDrawable(R.drawable.bg_card_focus)
+                tv.setOnFocusChangeListener { view, has ->
+                    view.scaleX = if (has) 1.03f else 1f
+                    view.scaleY = if (has) 1.03f else 1f
+                }
+            }
             return Holder(tv)
         }
 

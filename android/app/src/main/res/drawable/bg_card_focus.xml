@@ -5,14 +5,21 @@
         <selector>
             <item android:state_focused="true">
                 <shape android:shape="rectangle">
-                    <solid android:color="#1a1a22" />
-                    <stroke android:width="2dp" android:color="#ff4d2e" />
+                    <solid android:color="#1aff4d2e" />
+                    <stroke android:width="3dp" android:color="#ff4d2e" />
+                    <corners android:radius="12dp" />
+                </shape>
+            </item>
+            <item android:state_pressed="true">
+                <shape android:shape="rectangle">
+                    <solid android:color="#1a131318" />
+                    <stroke android:width="2dp" android:color="#66ff4d2e" />
                     <corners android:radius="12dp" />
                 </shape>
             </item>
             <item>
                 <shape android:shape="rectangle">
-                    <solid android:color="#131318" />
+                    <solid android:color="@android:color/transparent" />
                     <corners android:radius="12dp" />
                 </shape>
             </item>

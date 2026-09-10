@@ -10,7 +10,8 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 
 class StreamAdapter(
-    private val onOpen: (Strm) -> Unit
+    private val onOpen: (Strm) -> Unit,
+    private val tvMode: Boolean = false
 ) : RecyclerView.Adapter<StreamAdapter.Holder>() {
 
     private val items = mutableListOf<Strm>()
@@ -23,6 +24,11 @@ class StreamAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val v = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_stream, parent, false)
+        if (tvMode) {
+            v.isFocusable = true
+            v.foreground = v.context.getDrawable(R.drawable.bg_card_focus)
+            v.setOnFocusChangeListener { view, has -> view.scaleX = if (has) 1.04f else 1f; view.scaleY = if (has) 1.04f else 1f }
+        }
         return Holder(v)
     }
 

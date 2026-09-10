@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         grid.layoutManager = GridLayoutManager(this, 3)
-        streamAdapter = StreamAdapter(::openStream)
+        streamAdapter = StreamAdapter(::openStream, isTvDevice(this))
         grid.adapter = streamAdapter
 
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -159,8 +159,10 @@ class MainActivity : AppCompatActivity() {
             btn.insetBottom = 0
             btn.minHeight = 0
             btn.cornerRadius = 20
-            btn.isFocusable = true
-            btn.isFocusableInTouchMode = true
+            if (isTvDevice(this)) {
+                btn.isFocusable = true
+                btn.isFocusableInTouchMode = true
+            }
             btn.strokeWidth = resources.getDimensionPixelSize(R.dimen.cat_stroke)
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
