@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -27,7 +28,7 @@
         app:tabSelectedTextColor="@color/accent"
         app:tabTextColor="@color/textSecondary"
         app:tabIndicatorHeight="3dp"
-        xmlns:app="http://schemas.android.com/apk/res-auto">
+        app:tabMode="scrollable">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
@@ -41,7 +42,30 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="SERIES" />
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="HISTORIAL" />
     </com.google.android.material.tabs.TabLayout>
+
+    <EditText
+        android:id="@+id/searchBox"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="6dp"
+        android:background="@color/panel"
+        android:drawableStart="@android:drawable/ic_menu_search"
+        android:drawablePadding="8dp"
+        android:drawableTint="@color/textSecondary"
+        android:fontFamily="sans-serif"
+        android:hint="Buscar..."
+        android:inputType="text"
+        android:maxLines="1"
+        android:paddingHorizontal="12dp"
+        android:textColor="@color/textPrimary"
+        android:textColorHint="@color/textSecondary"
+        android:textSize="14sp" />
 
     <HorizontalScrollView
         android:id="@+id/catScroller"

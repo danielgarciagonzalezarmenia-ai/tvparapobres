@@ -44,9 +44,24 @@ class SeriesActivity : AppCompatActivity() {
             }.thenBy { it.title })
             epList.adapter = EpisodeAdapter(sorted) { ep ->
                 val url = Accounts.seriesUrl(ep.id, ep.ext)
+                val key = "ser:${ep.id}"
+                val entry = org.json.JSONObject().apply {
+                    put("key", key)
+                    put("id", ep.id)
+                    put("name", "$seriesName — Cap ${ep.num}")
+                    put("logo", "")
+                    put("type", "series")
+                    put("ext", ep.ext)
+                    put("url", url)
+                    put("position", 0)
+                    put("duration", 0)
+                    put("ts", System.currentTimeMillis())
+                }
+                HistoryManager.save(entry)
                 val i = Intent(this@SeriesActivity, PlayerActivity::class.java)
                 i.putExtra("url", url)
                 i.putExtra("title", "$seriesName — Cap ${ep.num}")
+                i.putExtra("histKey", key)
                 startActivity(i)
             }
         }
@@ -66,7 +81,7 @@ class SeriesActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: Holder, position: Int) {
             val ep = eps[position]
-            holder.tv.text = "Cap ${ep.num.orEmpty()} — ${ep.title.orEmpty()}"
+            holder.tv.text = "Cap ${ep.num.orEmpty()} — ${NameCleaner.clean(ep.title.orEmpty())}"
             holder.tv.setOnClickListener { onOpen(ep) }
         }
 

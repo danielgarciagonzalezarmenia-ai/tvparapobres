@@ -6,6 +6,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 data class Cat(
@@ -45,8 +46,8 @@ object Xtream {
             val req = Request.Builder().url(sb.toString()).build()
             client.newCall(req).execute().use { resp ->
                 if (!resp.isSuccessful) return@withContext null
-                val body = resp.body?.string() ?: return@withContext null
-                val t = body.trim()
+                val body = resp.body?.bytes() ?: return@withContext null
+                val t = String(body, Charsets.UTF_8).trim()
                 when {
                     t.startsWith("{") -> try { return@withContext JSONObject(t) } catch (e: Exception) { null }
                     t.startsWith("[") -> return@withContext JSONObject().put("_arr", JSONArray(t))

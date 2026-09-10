@@ -28,7 +28,7 @@ class StreamAdapter(
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val s = items[position]
-        holder.name.text = s.name
+        holder.name.text = NameCleaner.clean(s.name)
         if (s.icon.isNotBlank()) {
             Glide.with(holder.logo)
                 .load(s.icon)
