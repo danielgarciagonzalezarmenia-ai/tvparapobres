@@ -4,6 +4,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import DEFAULT_USERS from './accounts.js'
 dotenv.config()
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -18,6 +19,25 @@ export const EXPIRE = process.env.XTREAM_EXPIRE || null
 const API_BASE = `${SERVER}/player_api.php`
 const TIMEOUT_MS = 60000
 const RETRIES = 3
+
+// --- Rotación de usuarios ---
+// Prioridad: variable de entorno XTREAM_USERS (si viene bien formada) > cuentas del código.
+let users = DEFAULT_USERS
+try {
+  const raw = process.env.XTREAM_USERS
+  if (raw) {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length > 0) users = parsed
+  }
+} catch {}
+if (users.length === 0) users = [{ user: USER, pass: PASS }]
+let _idx = 0
+export function nextUser() {
+  const u = users[_idx % users.length]
+  _idx++
+  return u
+}
+export const userCount = users.length
 
 const cache = new Map()
 const inflight = new Map()
@@ -98,7 +118,8 @@ async function get(action = '', params = {}, ttl = 15 * 60 * 1000) {
 
   if (hit && Date.now() - hit.ts < ttl) return hit.data
 
-  const qs = new URLSearchParams({ username: USER, password: PASS, ...(action ? { action } : {}) })
+  const { user, pass } = nextUser()
+  const qs = new URLSearchParams({ username: user, password: pass, ...(action ? { action } : {}) })
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') qs.set(k, v)
   const url = `${API_BASE}?${qs}`
   const filePath = diskPath(key)
@@ -165,7 +186,19 @@ export const getAllLiveStreams = () => get('get_live_streams', {}, 15 * 60 * 100
 export const getAllVod = () => get('get_vod_streams', {}, 60 * 60 * 1000).then((l) => slim(cleanStreams(l)))
 export const getAllSeries = () => get('get_series', {}, 60 * 60 * 1000).then((l) => slim(cleanStreams(l)))
 
-export const liveUrl = (id) => `${SERVER}/${USER}/${PASS}/${id}`
-export const vodUrl = (id, ext = '') => `${SERVER}/movie/${USER}/${PASS}/${id}${ext ? '.' + ext : ''}`
-export const seriesUrl = (seriesId) => `${SERVER}/series/${USER}/${PASS}/${seriesId}`
-export const episodeUrl = (id, ext = 'mp4') => `${SERVER}/series/${USER}/${PASS}/${id}.${ext}`
+export const liveUrl = (id) => {
+  const { user, pass } = nextUser()
+  return `${SERVER}/${user}/${pass}/${id}`
+}
+export const vodUrl = (id, ext = '') => {
+  const { user, pass } = nextUser()
+  return `${SERVER}/movie/${user}/${pass}/${id}${ext ? '.' + ext : ''}`
+}
+export const seriesUrl = (seriesId) => {
+  const { user, pass } = nextUser()
+  return `${SERVER}/series/${user}/${pass}/${seriesId}`
+}
+export const episodeUrl = (id, ext = 'mp4') => {
+  const { user, pass } = nextUser()
+  return `${SERVER}/series/${user}/${pass}/${id}.${ext}`
+}

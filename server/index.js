@@ -32,7 +32,7 @@ app.get('/api/status', wrap(async (req, res) => {
 app.get('/health', (_req, res) => res.json({ ok: true, ts: Date.now() }))
 
 app.get('/api/meta', (_req, res) => {
-  res.json({ server: xt.SERVER, user: xt.USER, expire: xt.EXPIRE })
+  res.json({ server: xt.SERVER, user: xt.USER, expire: xt.EXPIRE, users: xt.userCount })
 })
 
 app.get('/api/categories', wrap(async (req, res) => res.json(await xt.getLiveCategories())))
@@ -86,20 +86,80 @@ function pipeUpstream(srcUrl, req, res, depth = 0) {
 app.get('/api/rt/live/:id', (req, res) => {
   const id = String(req.params.id).replace(/[^0-9]/g, '')
   if (!id) return res.status(400).json({ error: 'ID inválido' })
+  const { user, pass } = xt.nextUser()
   res.set('Content-Type', 'video/mp2t')
   res.set('Cache-Control', 'no-store')
-  pipeUpstream(`${xt.SERVER}/${xt.USER}/${xt.PASS}/${id}`, req, res)
+  pipeUpstream(`${xt.SERVER}/${user}/${pass}/${id}`, req, res)
 })
 
-app.get('/api/rt/img', (req, res) => {
+// --- Caché de imágenes en disco: evita repetir solicitudes al proveedor. ---
+import { createHash } from 'node:crypto'
+import fsp from 'node:fs/promises'
+
+const IMG_CACHE = path.join(__dirname, '.imgcache')
+try { fs.mkdirSync(IMG_CACHE, { recursive: true }) } catch {}
+
+const imgPath = (u) => {
+  const h = createHash('sha1').update(u).digest('hex')
+  return path.join(IMG_CACHE, `${h}.img`)
+}
+const imgInflight = new Map()
+
+app.get('/api/rt/img', async (req, res) => {
   const u = String(req.query.u || '')
   try {
     const p = new URL(u)
-    if (p.protocol !== 'http:' && p.protocol !== 'https:') return res.status(400).json({ error: 'URL inválida' })
+    if (p.protocol !== 'http:' && p.protocol !== 'https:') throw new Error('protocolo inválido')
   } catch { return res.status(400).json({ error: 'URL inválida' }) }
-  res.set('Content-Type', 'image/jpeg')
-  res.set('Cache-Control', 'public, max-age=86400')
-  pipeUpstream(u, req, res)
+
+  const filep = imgPath(u)
+
+  // Servir desde caché en disco (hasta 7 días).
+  try {
+    const st = await fsp.stat(filep)
+    if (Date.now() - st.mtimeMs < 7 * 24 * 60 * 60 * 1000) {
+      res.set('Content-Type', 'image/jpeg')
+      res.set('Cache-Control', 'public, max-age=604800')
+      res.setHeader('Access-Control-Allow-Origin', '*')
+      return fs.createReadStream(filep).pipe(res)
+    }
+  } catch {}
+
+  // Deduplicar: si otra petición está descargando la misma imagen, reutilizar el buffer.
+  if (imgInflight.has(u)) {
+    try { return res.set('Content-Type', 'image/jpeg').end(Buffer.from(await imgInflight.get(u))) }
+    catch { return res.status(502).json({ error: 'No se pudo cargar la imagen' }) }
+  }
+
+  const job = (async () => {
+    try {
+      const upstream = await fetch(u, {
+        headers: { 'User-Agent': 'Mozilla/5.0', Accept: '*/*' },
+        signal: AbortSignal.timeout(15000),
+        redirect: 'follow'
+      })
+      if (!upstream.ok) throw new Error(`HTTP ${upstream.status}`)
+      const buf = Buffer.from(await upstream.arrayBuffer())
+      await fsp.writeFile(filep, buf) // guardamos para futuros aciertos de caché
+      return buf
+    } catch (e) {
+      throw e
+    } finally {
+      imgInflight.delete(u)
+    }
+  })()
+
+  imgInflight.set(u, job)
+  try {
+    const buf = await job
+    res.set('Content-Type', 'image/jpeg')
+    res.set('Cache-Control', 'public, max-age=604800')
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.end(buf)
+  } catch {
+    res.set('Cache-Control', 'no-store')
+    return res.status(502).json({ error: 'No se pudo cargar la imagen' })
+  }
 })
 
 app.get('/api/url/live/:id', wrap(async (req, res) => {
@@ -119,7 +179,8 @@ app.get('/api/stream/:kind/:id/:ext', (req, res) => {
   const id = String(req.params.id).replace(/[^0-9]/g, '')
   const ext = String(req.params.ext).replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toLowerCase()
   if (!id) return res.status(400).json({ error: 'ID inválido' })
-  const src = `${xt.SERVER}/${kind === 'series' ? 'series' : 'movie'}/${xt.USER}/${xt.PASS}/${id}.${ext || 'mkv'}`
+  const { user, pass } = xt.nextUser()
+  const src = `${xt.SERVER}/${kind === 'series' ? 'series' : 'movie'}/${user}/${pass}/${id}.${ext || 'mkv'}`
 
   res.set({
     'Content-Type': 'video/mp2t',
