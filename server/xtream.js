@@ -8,7 +8,9 @@ import DEFAULT_USERS from './accounts.js'
 dotenv.config()
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const CACHE_DIR = path.join(__dirname, '.cache')
+// En la app de escritorio (Electron) el directorio base no es escribible (asar),
+// así que la caché se redirige a la carpeta de datos del usuario vía XTREAM_CACHE_DIR.
+const CACHE_DIR = process.env.XTREAM_CACHE_DIR || path.join(__dirname, '.cache')
 try { fs.mkdirSync(CACHE_DIR, { recursive: true }) } catch {}
 
 export const SERVER = (process.env.XTREAM_SERVER || 'http://superxlatino.com:8880').replace(/\/+$/, '')

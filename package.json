@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Reproductor web IPTV (Xtream) - TV Para Pobres",
+  "description": "Reproductor IPTV (Xtream) - TV Para Pobres",
+  "main": "desktop/main.js",
   "scripts": {
     "dev": "concurrently -k -n server,web -c blue,magenta \"node --watch server/index.js\" \"vite\"",
     "build": "vite build",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "desktop": "npm run build && electron .",
+    "desktop:pack": "electron-builder --dir",
+    "desktop:exe": "npm run build && electron-builder --win portable"
   },
   "dependencies": {
     "concurrently": "^9.1.0",
@@ -22,6 +26,39 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "vite": "^6.0.7"
+  },
+  "build": {
+    "appId": "com.tvparapobres.app",
+    "productName": "TV Para Pobres",
+    "directories": {
+      "output": "release",
+      "buildResources": "assets"
+    },
+    "files": [
+      "desktop/**/*",
+      "server/**/*",
+      "client/dist/**/*"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "portable": {
+      "artifactName": "TV-Para-Pobres.exe"
+    }
   }
 }

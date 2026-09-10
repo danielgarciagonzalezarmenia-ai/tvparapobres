@@ -5,3 +5,20 @@ dist
 server/.cache
 *.msi
 server/.imgcache
+
+# Android
+android/.gradle
+android/build
+android/app/build
+android/local.properties
+android/.idea
+android/app/release.keystore
+android/app/*.jks
+.android
+
+# Releases generadas
+release/win-unpacked
+release/*.exe
+release/apk/*.apk
+release/builder-debug.yml
+release/.icon-ico

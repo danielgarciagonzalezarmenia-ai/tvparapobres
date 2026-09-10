@@ -96,7 +96,9 @@ app.get('/api/rt/live/:id', (req, res) => {
 import { createHash } from 'node:crypto'
 import fsp from 'node:fs/promises'
 
-const IMG_CACHE = path.join(__dirname, '.imgcache')
+const IMG_CACHE = process.env.XTREAM_CACHE_DIR
+  ? path.join(process.env.XTREAM_CACHE_DIR, 'img')
+  : path.join(__dirname, '.imgcache')
 try { fs.mkdirSync(IMG_CACHE, { recursive: true }) } catch {}
 
 const imgPath = (u) => {
@@ -255,7 +257,8 @@ if (fs.existsSync(DIST)) {
 }
 
 const port = Number(process.env.PORT) || 4000
-app.listen(port, () => {
+const host = process.env.HOST || undefined // undefined = todas las interfaces (web); 127.0.0.1 para app de escritorio
+app.listen(port, host, () => {
   console.log(`\n  TV Para Pobres -> http://localhost:${port}`)
   console.log(`  API Xtream      -> ${xt.SERVER}\n`)
 })
