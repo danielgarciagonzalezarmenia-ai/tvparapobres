@@ -4,41 +4,117 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TV Para Pobres</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{background:#0a0a0c;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
-    .logo{font-size:3rem;font-weight:800;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
-    .subtitle{font-size:1.1rem;color:#888;margin-bottom:2.5rem;max-width:500px}
-    .buttons{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-bottom:2rem}
-    .btn{display:flex;align-items:center;gap:.6rem;padding:.85rem 1.8rem;border-radius:12px;font-size:1rem;font-weight:600;text-decoration:none;transition:all .2s;cursor:pointer;border:none}
-    .btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(102,126,234,.3)}
-    .btn-pc{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
-    .btn-apk{background:linear-gradient(135deg,#2d9f4e,#1a7a3a);color:#fff}
-    .btn svg{width:22px;height:22px;fill:currentColor}
-    .footer{margin-top:1.5rem;font-size:.85rem;color:#555}
-    .feat{display:flex;gap:2rem;margin-bottom:2rem;flex-wrap:wrap;justify-content:center}
-    .feat span{font-size:.9rem;color:#aaa}
-    @media(max-width:500px){.logo{font-size:2rem}.buttons{flex-direction:column;align-items:center}}
+    :root {
+      --bg: #000;
+      --panel: #141517;
+      --panel-2: #191b1e;
+      --panel-3: #212629;
+      --line-soft: rgba(255,255,255,0.06);
+      --text: #f0f0f0;
+      --muted: #a1a4a5;
+      --accent: #ff4d2e;
+      --accent-strong: #ff8a66;
+      --green: #66d9a8;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+      background:radial-gradient(1000px 520px at 50% -8%,rgba(255,77,46,0.13),transparent 62%),var(--bg);
+      color:var(--text);-webkit-font-smoothing:antialiased;
+      display:flex;flex-direction:column;min-height:100vh;
+    }
+
+    header{
+      display:flex;align-items:center;gap:20px;
+      padding:12px 24px;
+      background:rgba(6,6,8,0.82);backdrop-filter:blur(18px);
+      border-bottom:1px solid var(--line-soft);flex-shrink:0;
+    }
+    .brand{font-weight:800;letter-spacing:0.16em;font-size:0.9rem;color:var(--text);display:flex;align-items:center;gap:10px;white-space:nowrap}
+    .brand-dot{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 35% 35%,var(--accent-strong),var(--accent));box-shadow:0 0 14px var(--accent)}
+
+    .hero{
+      flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:4rem 2rem 2rem;text-align:center;gap:1.5rem;
+    }
+    .hero h1{
+      font-size:clamp(2rem,5vw,3.2rem);font-weight:800;letter-spacing:0.08em;
+      background:linear-gradient(135deg,var(--accent-strong),var(--accent));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    }
+    .hero p{font-size:1.05rem;color:var(--muted);max-width:460px;line-height:1.6}
+
+    .features{
+      display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:.5rem;
+    }
+    .feat{
+      display:flex;align-items:center;gap:6px;
+      background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;
+      padding:8px 16px;font-size:.85rem;color:var(--muted);
+    }
+    .feat .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .feat .dot.red{background:var(--accent)}
+    .feat .dot.green{background:var(--green)}
+
+    .downloads{
+      display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:1.5rem;
+    }
+    .btn{
+      display:flex;align-items:center;gap:10px;
+      padding:14px 28px;border-radius:14px;font-size:.95rem;font-weight:600;
+      text-decoration:none;transition:all .25s;cursor:pointer;border:none;
+      background:var(--panel-2);border:1px solid var(--line-soft);color:var(--text);
+    }
+    .btn:hover{
+      border-color:var(--accent);box-shadow:0 0 30px rgba(255,77,46,0.15);
+      transform:translateY(-2px);
+    }
+    .btn svg{width:20px;height:20px;fill:currentColor;opacity:.7}
+    .btn-label{font-size:.7rem;color:var(--muted);font-weight:400;margin-left:4px}
+
+    footer{
+      text-align:center;padding:1.5rem;font-size:.8rem;color:var(--muted);
+      border-top:1px solid var(--line-soft);
+    }
+
+    @media(max-width:520px){
+      .hero{padding:3rem 1.5rem 1.5rem}
+      .downloads{flex-direction:column;align-items:center}
+      .btn{width:100%;max-width:280px;justify-content:center}
+    }
   </style>
 </head>
 <body>
-  <div class="logo">TV Para Pobres</div>
-  <div class="subtitle">Peliculas, series y canales en vivo, directos en tu PC o celular.</div>
-  <div class="feat">
-    <span>&#9654; Peliculas</span>
-    <span>&#9733; Series</span>
-    <span>&#9898; En vivo</span>
-  </div>
-  <div class="buttons">
-    <a class="btn btn-pc" href="/release/TV-Para-Pobres.exe" download>
-      <svg viewBox="0 0 24 24"><path d="M3 17h18v2H3v-2zm0-5h18v2H3v-2zm0-5h18v2H3V7zm0 10h18v2H3v-2zm0-10v2h18V7H3z"/></svg>
-      Descargar para PC
-    </a>
-    <a class="btn btn-apk" href="/release/apk/TV-Para-Pobres.apk" download>
-      <svg viewBox="0 0 24 24"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zM15.53 2.16l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0012 1c-.96 0-1.86.23-2.66.63L7.85.15c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31A5.983 5.983 0 006 7h12c0-2.1-1.1-3.93-2.77-4.97l.3.13zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
-      Descargar APK Android
-    </a>
-  </div>
-  <div class="footer">TV Para Pobres &mdash; GRATIS, sin registro.</div>
+  <header>
+    <div class="brand"><span class="brand-dot"></span>TV PARA POBRES</div>
+  </header>
+
+  <main class="hero">
+    <h1>TV PARA POBRES</h1>
+    <p>Peliculas, series y canales en vivo directos en tu PC o celular. Sin registros, sin costos.</p>
+
+    <div class="features">
+      <div class="feat"><span class="dot red"></span>Peliculas</div>
+      <div class="feat"><span class="dot green"></span>Series</div>
+      <div class="feat"><span class="dot red"></span>En vivo</div>
+    </div>
+
+    <div class="downloads">
+      <a class="btn" href="https://github.com/danielgarciagonzalezarmenia-ai/tvparapobres/releases/download/v1.0.0/TV-Para-Pobres.exe" download>
+        <svg viewBox="0 0 24 24"><path d="M3 17h18v2H3v-2zm0-5h18v2H3v-2zm0-5h18v2H3V7zm0 10h18v2H3v-2zm0-10v2h18V7H3z"/></svg>
+        Descargar para PC <span class="btn-label">.exe</span>
+      </a>
+      <a class="btn" href="https://github.com/danielgarciagonzalezarmenia-ai/tvparapobres/releases/download/v1.0.0/TV-Para-Pobres.apk" download>
+        <svg viewBox="0 0 24 24"><path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V7H6v11zM3.5 7C2.67 7 2 7.67 2 8.5v7c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-7C5 7.67 4.33 7 3.5 7zm17 0c-.83 0-1.5.67-1.5 1.5v7c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-7c0-.83-.67-1.5-1.5-1.5zM15.53 2.16l1.3-1.3c.2-.2.2-.51 0-.71-.2-.2-.51-.2-.71 0l-1.48 1.48A5.84 5.84 0 0012 1c-.96 0-1.86.23-2.66.63L7.85.15c-.2-.2-.51-.2-.71 0-.2.2-.2.51 0 .71l1.31 1.31A5.983 5.983 0 006 7h12c0-2.1-1.1-3.93-2.77-4.97l.3.13zM10 5H9V4h1v1zm5 0h-1V4h1v1z"/></svg>
+        Descargar APK <span class="btn-label">Android</span>
+      </a>
+    </div>
+  </main>
+
+  <footer>TV Para Pobres &mdash; Gratuito, sin registro.</footer>
 </body>
 </html>
