@@ -2,7 +2,10 @@ package com.tvparapobres.app
 
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
+import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -17,9 +20,19 @@ class PlayerActivity : AppCompatActivity() {
 
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
+    private lateinit var streamTitle: TextView
     private var histKey: String? = null
     private var startPos: Long = 0
     private var wakeLock: PowerManager.WakeLock? = null
+    private val hideHandler = Handler(Looper.getMainLooper())
+
+    private val hideTitle = Runnable {
+        streamTitle.animate()
+            .alpha(0f)
+            .setDuration(300)
+            .withEndAction { streamTitle.visibility = View.GONE }
+            .start()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +51,11 @@ class PlayerActivity : AppCompatActivity() {
         histKey = intent.getStringExtra("histKey")
         startPos = intent.getLongExtra("startPosition", 0)
         playerView = findViewById(R.id.playerView)
-        findViewById<TextView>(R.id.streamTitle).text = title.orEmpty()
+        streamTitle = findViewById(R.id.streamTitle)
+        streamTitle.text = title.orEmpty()
+        streamTitle.alpha = 1f
+        streamTitle.visibility = View.VISIBLE
+        hideHandler.postDelayed(hideTitle, 2000)
 
         if (url.isNullOrBlank()) {
             finish()
@@ -68,6 +85,7 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
+        hideHandler.removeCallbacks(hideTitle)
         savePos()
         player?.playWhenReady = false
         playerView.onPause()
@@ -79,6 +97,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        hideHandler.removeCallbacks(hideTitle)
         savePos()
         super.onDestroy()
         player?.release()

@@ -3,6 +3,7 @@ package com.tvparapobres.app
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -47,6 +48,10 @@ class MainActivity : AppCompatActivity() {
         loading = findViewById(R.id.loading)
         tabs = findViewById(R.id.tabLayout)
         searchBox = findViewById(R.id.searchBox)
+
+        findViewById<View>(R.id.btnDonate).setOnClickListener {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://tvparapobres.tipsterpage.com/kttCMjB2")))
+        }
 
         grid.layoutManager = GridLayoutManager(this, 3)
         streamAdapter = StreamAdapter(::openStream)
@@ -154,6 +159,8 @@ class MainActivity : AppCompatActivity() {
             btn.insetBottom = 0
             btn.minHeight = 0
             btn.cornerRadius = 20
+            btn.isFocusable = true
+            btn.isFocusableInTouchMode = true
             btn.strokeWidth = resources.getDimensionPixelSize(R.dimen.cat_stroke)
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,

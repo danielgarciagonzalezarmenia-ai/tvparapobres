@@ -4,26 +4,49 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/black">
+    android:background="@color/black"
+    android:focusable="true"
+    android:focusableInTouchMode="true">
 
-    <TextView
-        android:id="@+id/brandTitle"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="start"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="14dp"
-        android:fontFamily="sans-serif-black"
-        android:letterSpacing="0.08"
-        android:text="TV PARA POBRES"
-        android:textColor="@color/textPrimary"
-        android:textSize="17sp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="4dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-black"
+            android:letterSpacing="0.08"
+            android:text="TV PARA POBRES"
+            android:textColor="@color/textPrimary"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/btnDonate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_donate"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:text="♥ Apoyar"
+            android:textColor="@color/accent"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:focusable="true"
+            android:focusableInTouchMode="true" />
+    </LinearLayout>
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tabLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="2dp"
         app:tabIndicatorColor="@color/accent"
         app:tabSelectedTextColor="@color/accent"
         app:tabTextColor="@color/textSecondary"
@@ -90,7 +113,9 @@
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingHorizontal="12dp"
-        android:paddingVertical="8dp" />
+        android:paddingVertical="8dp"
+        android:descendantFocusability="afterDescendants"
+        android:focusable="false" />
 
     <ProgressBar
         android:id="@+id/loading"
