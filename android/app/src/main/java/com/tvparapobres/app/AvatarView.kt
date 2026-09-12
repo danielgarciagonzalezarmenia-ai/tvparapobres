@@ -1,13 +1,17 @@
 package com.tvparapobres.app
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.util.AttributeSet
 import android.util.Base64
 import android.view.LayoutInflater
 import android.widget.FrameLayout
 import android.widget.ImageView
-import com.google.android.material.imageview.ShapeableImageView
 
 /**
  * Avatar de perfil como la web: carita teñida con el color del perfil,
@@ -34,7 +38,7 @@ class AvatarView @JvmOverloads constructor(
     }
 
     private val face: ImageView
-    private val photo: ShapeableImageView
+    private val photo: ImageView
 
     init {
         LayoutInflater.from(ctx).inflate(R.layout.avatar_view, this, true)
@@ -43,24 +47,39 @@ class AvatarView @JvmOverloads constructor(
     }
 
     fun set(photoData: String?, color: Int, variant: Int) {
-        if (!photoData.isNullOrEmpty()) {
-            try {
-                val b64 = if (photoData.contains(",")) photoData.substringAfter(",") else photoData
-                val bytes = Base64.decode(b64, Base64.DEFAULT)
-                val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                if (bmp != null) {
-                    photo.setImageBitmap(bmp)
-                    photo.visibility = VISIBLE
-                    face.visibility = GONE
-                    return
-                }
-            } catch (_: Exception) {
-            }
+        val bmp = decodePhoto(photoData)
+        if (bmp != null) {
+            photo.setImageBitmap(circleCrop(bmp))
+            photo.visibility = VISIBLE
+            face.visibility = GONE
+            return
         }
         photo.visibility = GONE
         face.visibility = VISIBLE
         face.setImageResource(faceRes(variant))
         face.setColorFilter(color)
+    }
+
+    private fun decodePhoto(photoData: String?): Bitmap? {
+        if (photoData.isNullOrEmpty()) return null
+        return try {
+            val b64 = if (photoData.contains(",")) photoData.substringAfter(",") else photoData
+            val bytes = Base64.decode(b64, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun circleCrop(src: Bitmap): Bitmap {
+        val size = minOf(src.width, src.height).coerceAtLeast(1)
+        val out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+        canvas.drawBitmap(src, -(src.width - size) / 2f, -(src.height - size) / 2f, paint)
+        return out
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {

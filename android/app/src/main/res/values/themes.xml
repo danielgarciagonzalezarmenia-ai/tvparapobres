@@ -11,10 +11,6 @@
         <item name="android:fontFamily">@font/outfit</item>
     </style>
 
-    <style name="CircleImage">
-        <item name="cornerSize">50%</item>
-    </style>
-
     <style name="FormLabel">
         <item name="android:fontFamily">@font/jetbrains_mono</item>
         <item name="android:textSize">10sp</item>
