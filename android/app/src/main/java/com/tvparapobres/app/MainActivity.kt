@@ -197,7 +197,11 @@ class MainActivity : AppCompatActivity() {
         }
 
     private fun filterSearch(q: String) {
-        if (q.isBlank()) {
+        // Se busca sobre el nombre NORMALIZADO (limpio, sin tildes, sin simbolos ni
+        // espacios): es lo mismo que ve el usuario en la tarjeta. Asi "espn"
+        // encuentra "*ESP*N", "E S P N" o "3SPN".
+        val nq = norm(q)
+        if (nq.isEmpty()) {
             searching = false
             if (currentTab == 0) {
                 visibleLive = 0
@@ -210,11 +214,29 @@ class MainActivity : AppCompatActivity() {
             return
         }
         searching = true
-        val lower = q.lowercase()
-        val filtered = allItems.filter { it.name.lowercase().contains(lower) }
+        val filtered = allItems.filter { normCached(it.name).contains(nq) }
         streamAdapter.submit(filtered)
         streamAdapter.setHasMore(false)
         grid.scrollToPosition(0)
+    }
+
+    private val R_MARKS = Regex("\\p{M}")
+    private val R_NONALNUM = Regex("[^a-z0-9]")
+    private val normCache = HashMap<String, String>(2048)
+
+    private fun norm(s: String): String {
+        val folded = java.text.Normalizer.normalize(cleanName(s), java.text.Normalizer.Form.NFD)
+            .replace(R_MARKS, "")
+        return folded.lowercase().replace(R_NONALNUM, "")
+    }
+
+    private fun cleanName(raw: String): String = NameCleaner.clean(raw)
+
+    private fun normCached(raw: String): String =
+        normCache.getOrPut(raw) { norm(raw) }
+
+    private fun warmNorm(items: List<Strm>) {
+        for (s in items) normCache.getOrPut(s.name) { norm(s.name) }
     }
 
     private fun reload() {
@@ -242,7 +264,11 @@ class MainActivity : AppCompatActivity() {
             // Red en IO y ordenamiento pesado en Default: nada bloquea el hilo principal (evita ANR).
             val list = try {
                 val raw = withContext(Dispatchers.IO) { Xtream.liveAll() }
-                withContext(Dispatchers.Default) { Xtream.liveSorter(raw) }
+                withContext(Dispatchers.Default) {
+                    val sorted = Xtream.liveSorter(raw)
+                    warmNorm(sorted)
+                    sorted
+                }
             } catch (e: Exception) {
                 emptyList<Strm>()
             }
@@ -310,6 +336,7 @@ class MainActivity : AppCompatActivity() {
         catScroller.visibility = View.GONE
         setBusy(true)
         allItems = favsAsStreams()
+        warmNorm(allItems)
         streamAdapter.setFavs(allItems)
         streamAdapter.submit(allItems)
         streamAdapter.setHasMore(false)
@@ -338,6 +365,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
         allItems = items
+        warmNorm(items)
         streamAdapter.setFavs(favsAsStreams())
         streamAdapter.submit(items)
         streamAdapter.setHasMore(false)
@@ -392,7 +420,8 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val list = try {
                 withContext(Dispatchers.IO) {
-                    if (currentTab == 1) Xtream.vodStreams(cat.id) else Xtream.series(cat.id)
+                    (if (currentTab == 1) Xtream.vodStreams(cat.id) else Xtream.series(cat.id))
+                        .also { warmNorm(it) }
                 }
             } catch (e: Exception) {
                 emptyList<Strm>()
