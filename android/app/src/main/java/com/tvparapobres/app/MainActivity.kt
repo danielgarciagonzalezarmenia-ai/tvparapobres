@@ -238,8 +238,10 @@ class MainActivity : AppCompatActivity() {
         catScroller.visibility = View.GONE
         setBusy(true)
         lifecycleScope.launch {
+            // Red en IO y ordenamiento pesado en Default: nada bloquea el hilo principal (evita ANR).
             val list = try {
-                withContext(Dispatchers.IO) { Xtream.liveAll() }
+                val raw = withContext(Dispatchers.IO) { Xtream.liveAll() }
+                withContext(Dispatchers.Default) { Xtream.liveSorter(raw) }
             } catch (e: Exception) {
                 emptyList<Strm>()
             }

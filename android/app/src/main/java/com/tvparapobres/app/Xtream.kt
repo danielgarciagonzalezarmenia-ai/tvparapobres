@@ -103,17 +103,20 @@ object Xtream {
             }
             ?: emptyList()
 
+    private val R_B64 = Regex("^[A-Za-z0-9+/]+={0,2}$")
+    private val R_WS = Regex("\\s")
+
     /** Si el título viene base64 lo decodifica (igual que client/src/App.jsx) */
     private fun epgTitle(t: String): String {
         val s = t.trim()
         if (s.length < 8 || s.length % 4 != 0) return s
-        if (!Regex("^[A-Za-z0-9+/]+={0,2}$").matches(s)) return s
+        if (!R_B64.matches(s)) return s
         return try {
             val dec = String(android.util.Base64.decode(s, android.util.Base64.DEFAULT)).trim()
             val printableAscii = dec.all { ch ->
                 ch == '\u0009' || ch == '\u000A' || ch == '\u000D' || (ch.code in 0x20..0x7E)
             }
-            if (dec.length >= 4 && printableAscii && Regex("\\s").containsMatchIn(dec)) dec else s
+            if (dec.length >= 4 && printableAscii && R_WS.containsMatchIn(dec)) dec else s
         } catch (_: Exception) {
             s
         }
