@@ -25,6 +25,7 @@ class ProfilePickerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile_picker)
         cardRow = findViewById(R.id.cardRow)
+        findViewById<TextView>(R.id.versionLabel).text = "v" + BuildConfig.VERSION_NAME
 
         if (Profiles.profiles().isEmpty()) {
             startActivityForResult(Intent(this, CreateProfileActivity::class.java), REQ_CREATE)

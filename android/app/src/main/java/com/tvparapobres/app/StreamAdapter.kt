@@ -33,6 +33,17 @@ class StreamAdapter(
     private val items = mutableListOf<Strm>()
     private var hasMore = false
     private val favSet = HashSet<String>()
+    // Nombres ya limpiados: evita repetir regex en cada bind/scroll (fluidez + anti-ANR).
+    private val cleanCache = object : LinkedHashMap<String, String>(256, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>): Boolean = size > 600
+    }
+
+    private fun cleanName(raw: String): String {
+        cleanCache[raw]?.let { return it }
+        val c = NameCleaner.clean(raw)
+        cleanCache[raw] = c
+        return c
+    }
 
     fun setFavs(list: List<Strm>) {
         favSet.clear()
@@ -113,7 +124,7 @@ class StreamAdapter(
             }
             is StreamHolder -> {
                 val s = items[position]
-                holder.name.text = NameCleaner.clean(s.name)
+                holder.name.text = cleanName(s.name)
                 if (s.icon.isNotBlank()) {
                     Glide.with(holder.logo)
                         .load(s.icon)

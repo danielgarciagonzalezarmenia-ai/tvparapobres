@@ -73,4 +73,14 @@
         android:text="En el control remoto usa ← → para elegir perfil y OK para entrar.\nLos favoritos y el historial son independientes por perfil."
         android:textColor="@color/textMuted"
         android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/versionLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingBottom="14dp"
+        android:text="v1.2.3"
+        android:textColor="@color/textMuted"
+        android:textSize="11sp" />
 </LinearLayout>
