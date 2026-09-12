@@ -56,6 +56,8 @@
 
             <TextView
                 style="@style/FormLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
                 android:text="Foto del perfil (opcional)" />
 
@@ -113,6 +115,8 @@
 
             <TextView
                 style="@style/FormLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:text="Nombre del perfil" />
 
@@ -135,6 +139,8 @@
 
             <TextView
                 style="@style/FormLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:text="Color del perfil" />
 
@@ -147,6 +153,8 @@
 
             <TextView
                 style="@style/FormLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:text="Avatar" />
 
@@ -159,6 +167,8 @@
 
             <TextView
                 style="@style/FormLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="15dp"
                 android:text="PIN (opcional)" />
 

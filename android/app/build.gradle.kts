@@ -17,8 +17,8 @@ android {
         applicationId = "com.tvparapobres.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.3.3"
+        versionCode = 13
+        versionName = "1.3.4"
     }
 
     signingConfigs {
