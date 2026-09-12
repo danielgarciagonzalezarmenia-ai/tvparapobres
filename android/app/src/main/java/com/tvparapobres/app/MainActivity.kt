@@ -250,7 +250,7 @@ class MainActivity : AppCompatActivity() {
                 setBusy(false)
                 return@launch
             }
-            allItems = Xtream.liveSorter(list)
+            allItems = list
             streamAdapter.setFavs(favsAsStreams())
             showLivePage(initial = true)
             setBusy(false)

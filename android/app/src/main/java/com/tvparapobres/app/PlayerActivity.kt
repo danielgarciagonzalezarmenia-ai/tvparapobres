@@ -167,7 +167,8 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
             } catch (e: Exception) {
                 emptyList<Strm>()
             }
-            channelList = Xtream.liveSorter(list)
+            // El ordenamiento es pesado: va en background para no congelar el reproductor (ANR).
+            channelList = withContext(Dispatchers.Default) { Xtream.liveSorter(list) }
             val myId = histKey?.removePrefix("live:")
             idx = if (myId.isNullOrEmpty()) -1 else channelList.indexOfFirst { it.id == myId }
             if (channelList.isNotEmpty()) {
