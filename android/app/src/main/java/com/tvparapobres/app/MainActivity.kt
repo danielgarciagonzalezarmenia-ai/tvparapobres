@@ -75,6 +75,8 @@ class MainActivity : AppCompatActivity() {
     private var searching = false
     private var accent: Int = Color.parseColor(Profiles.DEFAULT_COLOR)
     private var tvMode = false
+    private var compactTabs = false
+    private var restoring = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,6 +95,7 @@ class MainActivity : AppCompatActivity() {
         Profiles.init(applicationContext)
         accent = Profiles.accentArgb()
         tvMode = isTvDevice(this)
+        compactTabs = !tvMode && resources.configuration.screenWidthDp < 600
 
         grid = findViewById(R.id.grid)
         catRow = findViewById(R.id.catRow)
@@ -167,6 +170,7 @@ class MainActivity : AppCompatActivity() {
 
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
+                if (restoring) return
                 currentTab = tab.position
                 showFavs = false
                 showHist = false
@@ -187,9 +191,30 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        if (savedInstanceState != null) restoreState(savedInstanceState)
         ensureProfile()
         checkService()
         lockHandler.postDelayed(lockCheck, 15000)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("tab", currentTab)
+        outState.putBoolean("favs", showFavs)
+        outState.putBoolean("hist", showHist)
+        if (::searchBox.isInitialized) outState.putString("q", searchBox.text.toString())
+    }
+
+    private fun restoreState(saved: Bundle) {
+        restoring = true
+        currentTab = saved.getInt("tab", 0)
+        showFavs = saved.getBoolean("favs", false)
+        showHist = saved.getBoolean("hist", false)
+        tabs.getTabAt(currentTab)?.select()
+        styleTabs()
+        updateHeadButtons()
+        searchBox.setText(saved.getString("q", ""))
+        restoring = false
     }
 
     override fun onDestroy() {
@@ -303,8 +328,16 @@ class MainActivity : AppCompatActivity() {
         TAB_TITLES.forEachIndexed { i, t ->
             val tab = tabs.newTab()
             val v = layoutInflater.inflate(R.layout.tab_pill, tabs, false)
-            v.findViewById<TextView>(R.id.tabLabel).text = t
-            v.findViewById<ImageView>(R.id.tabIcon).setImageResource(TAB_ICONS[i])
+            val label = v.findViewById<TextView>(R.id.tabLabel)
+            val icon = v.findViewById<ImageView>(R.id.tabIcon)
+            label.text = t
+            if (compactTabs) {
+                // En vertical angosto no caben icono+texto: solo texto (como la web móvil).
+                icon.visibility = View.GONE
+                label.textSize = 11f
+            } else {
+                icon.setImageResource(TAB_ICONS[i])
+            }
             tab.customView = v
             tabs.addTab(tab)
         }

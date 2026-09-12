@@ -25,6 +25,7 @@ import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.PlayerView
+import com.google.android.exoplayer2.ui.PlayerControlView
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,6 +36,7 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
 
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
+    private lateinit var playerTopBar: LinearLayout
     private lateinit var streamTitle: TextView
     private lateinit var chipText: TextView
     private lateinit var pulseDot: View
@@ -58,6 +60,9 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     private lateinit var errorMsg: TextView
     private val uiHandler = Handler(Looper.getMainLooper())
     private var accent: Int = Color.parseColor("#ff4d2e")
+    private var barsVisible = true
+    private var epgHasContent = false
+    private val barsHide = Runnable { showBars(false) }
 
     private var histKey: String? = null
     private var startPos: Long = 0
@@ -112,6 +117,7 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         FavoritesManager.init(applicationContext, pid.ifBlank { "default" })
 
         playerView = findViewById(R.id.playerView)
+        playerTopBar = findViewById(R.id.playerTopBar)
         streamTitle = findViewById(R.id.streamTitle)
         chipText = findViewById(R.id.chipText)
         pulseDot = findViewById(R.id.pulseDot)
@@ -276,8 +282,21 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         p.addListener(this)
         player = p
         playerView.player = p
+        // Barras propias siguen al control nativo: pantalla completa real sin nada fijo.
+        playerView.setControllerVisibilityListener(
+            PlayerControlView.VisibilityListener { visibility ->
+                showBars(visibility == View.VISIBLE)
+            }
+        )
         setMedia(url)
         if (position > 0) p.seekTo(position)
+    }
+
+    private fun showBars(v: Boolean) {
+        barsVisible = v
+        uiHandler.removeCallbacks(barsHide)
+        playerTopBar.visibility = if (v) View.VISIBLE else View.GONE
+        epgBar.visibility = if (v && epgHasContent) View.VISIBLE else View.GONE
     }
 
     private fun setMedia(url: String) {
@@ -332,11 +351,12 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         val now = System.currentTimeMillis() / 1000
         val cur = lines.firstOrNull { it.start <= now && now < it.end }
         val next = lines.firstOrNull { it.start > now }
-        if (cur == null && next == null) {
+        epgHasContent = cur != null || next != null
+        if (!epgHasContent) {
             epgBar.visibility = View.GONE
             return
         }
-        epgBar.visibility = View.VISIBLE
+        epgBar.visibility = if (barsVisible) View.VISIBLE else View.GONE
         if (cur != null) {
             epgNowRow.visibility = View.VISIBLE
             epgNowTitle.text = NameCleaner.clean(cur.title).ifBlank { "Sin título" }
@@ -396,9 +416,16 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         retries = 0
         setMedia(url)
         renderEpg(emptyList())
+        epgHasContent = false
         epgBar.visibility = View.GONE
         loadEpg(s.id)
         showConnecting(null)
+        // Feedback del cambio aunque las barras estén ocultas.
+        if (!playerView.isControllerVisible) {
+            showBars(true)
+            uiHandler.removeCallbacks(barsHide)
+            uiHandler.postDelayed(barsHide, 4000)
+        }
     }
 
     override fun onPlayerError(error: PlaybackException) {
@@ -488,6 +515,7 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     override fun onPause() {
         super.onPause()
         uiHandler.removeCallbacks(retryRunnable)
+        uiHandler.removeCallbacks(barsHide)
         savePos()
         player?.playWhenReady = false
         playerView.onPause()
@@ -501,6 +529,7 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     override fun onDestroy() {
         uiHandler.removeCallbacks(retryRunnable)
         uiHandler.removeCallbacks(stallRunnable)
+        uiHandler.removeCallbacks(barsHide)
         savePos()
         player?.release()
         player = null
