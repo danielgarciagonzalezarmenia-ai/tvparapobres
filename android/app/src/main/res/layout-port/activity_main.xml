@@ -116,16 +116,12 @@
         android:background="@drawable/bg_tab_bar"
         android:padding="4dp">
 
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tabLayout"
+        <LinearLayout
+            android:id="@+id/tabRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:tabBackground="@android:color/transparent"
-            app:tabIndicatorHeight="0dp"
-            app:tabMinWidth="0dp"
-            app:tabPaddingStart="2dp"
-            app:tabPaddingEnd="2dp"
-            app:tabRippleColor="@color/accentFocus" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
     </FrameLayout>
 
     <HorizontalScrollView

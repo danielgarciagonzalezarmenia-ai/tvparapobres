@@ -30,7 +30,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,7 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var emptyView: TextView
     private lateinit var catRow: LinearLayout
     private lateinit var catScroller: View
-    private lateinit var tabs: TabLayout
+    private lateinit var tabRow: LinearLayout
     private lateinit var searchBox: EditText
     private lateinit var btnProfile: FrameLayout
     private lateinit var proAvatar: AvatarView
@@ -102,7 +101,7 @@ class MainActivity : AppCompatActivity() {
         catScroller = findViewById(R.id.catScroller)
         skelGrid = findViewById(R.id.skelGrid)
         emptyView = findViewById(R.id.emptyView)
-        tabs = findViewById(R.id.tabLayout)
+        tabRow = findViewById(R.id.tabRow)
         searchBox = findViewById(R.id.searchBox)
         btnProfile = findViewById(R.id.btnProfile)
         proAvatar = findViewById(R.id.proAvatar)
@@ -168,20 +167,26 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
-        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) {
-                if (restoring) return
-                currentTab = tab.position
-                showFavs = false
-                showHist = false
-                styleTabs()
-                updateHeadButtons()
-                reload()
-                if (searchBox.text.isNotEmpty()) searchBox.text.clear()
-            }
-            override fun onTabUnselected(tab: TabLayout.Tab) {}
-            override fun onTabReselected(tab: TabLayout.Tab) {}
-        })
+        // Foco bien visible en TV para los controles del header.
+        btnProfile.setOnFocusChangeListener { v, has ->
+            focusScale(v, has)
+            v.background = if (has) focusOvalBg() else ContextCompat.getDrawable(this, R.drawable.bg_prochip)
+        }
+        btnFav.setOnFocusChangeListener { v, has ->
+            focusScale(v, has)
+            if (has) v.background = focusPillBg(12) else updateHeadButtons()
+        }
+        btnHist.setOnFocusChangeListener { v, has ->
+            focusScale(v, has)
+            if (has) v.background = focusPillBg(12) else updateHeadButtons()
+        }
+        findViewById<View>(R.id.btnDonate).setOnFocusChangeListener { v, has ->
+            focusScale(v, has)
+            v.background = if (has) focusPillBg(12) else donateBg()
+        }
+        searchBox.setOnFocusChangeListener { v, has ->
+            v.background = if (has) searchFocusBg() else ContextCompat.getDrawable(this, R.drawable.bg_search)
+        }
 
         searchBox.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -210,7 +215,6 @@ class MainActivity : AppCompatActivity() {
         currentTab = saved.getInt("tab", 0)
         showFavs = saved.getBoolean("favs", false)
         showHist = saved.getBoolean("hist", false)
-        tabs.getTabAt(currentTab)?.select()
         styleTabs()
         updateHeadButtons()
         searchBox.setText(saved.getString("q", ""))
@@ -319,15 +323,48 @@ class MainActivity : AppCompatActivity() {
             cornerRadius = dp(12).toFloat()
         }
 
+    /* ----- Foco bien visible en TV ----- */
+    private fun focusScale(v: View, has: Boolean) {
+        v.animate().cancel()
+        if (has) v.animate().scaleX(1.08f).scaleY(1.08f).setDuration(140).start()
+        else v.animate().scaleX(1f).scaleY(1f).setDuration(140).start()
+    }
+
+    private fun focusOvalBg(): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(withAlpha(accent, 0x24))
+        setStroke(dp(2), accent)
+    }
+
+    private fun focusPillBg(radius: Int): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        setColor(withAlpha(accent, 0x2e))
+        setStroke(dp(2), accent)
+        cornerRadius = dp(radius).toFloat()
+    }
+
+    private fun focusTabBg(): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        setColor(withAlpha(accent, 0x22))
+        setStroke(dp(2), accent)
+        cornerRadius = dp(9).toFloat()
+    }
+
+    private fun searchFocusBg(): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        setColor(0xFF17191d.toInt())
+        setStroke(dp(2), accent)
+        cornerRadius = dp(12).toFloat()
+    }
+
     /* ----- Tabs estilo web (pills con icono) ----- */
     private val TAB_TITLES = listOf("LIVE", "PELÍCULAS", "SERIES")
     private val TAB_ICONS = listOf(R.drawable.ic_tab_live, R.drawable.ic_tab_film, R.drawable.ic_tab_series)
 
     private fun setupTabs() {
-        tabs.removeAllTabs()
+        tabRow.removeAllViews()
         TAB_TITLES.forEachIndexed { i, t ->
-            val tab = tabs.newTab()
-            val v = layoutInflater.inflate(R.layout.tab_pill, tabs, false)
+            val v = layoutInflater.inflate(R.layout.tab_pill, tabRow, false)
             val label = v.findViewById<TextView>(R.id.tabLabel)
             val icon = v.findViewById<ImageView>(R.id.tabIcon)
             label.text = t
@@ -338,17 +375,36 @@ class MainActivity : AppCompatActivity() {
             } else {
                 icon.setImageResource(TAB_ICONS[i])
             }
-            tab.customView = v
-            tabs.addTab(tab)
+            v.isFocusable = true
+            v.isFocusableInTouchMode = true
+            v.setOnClickListener { selectTab(i) }
+            v.setOnFocusChangeListener { view, has ->
+                if (has) {
+                    view.background = focusTabBg()
+                } else {
+                    styleTabs()
+                }
+            }
+            tabRow.addView(v)
         }
         styleTabs()
     }
 
+    private fun selectTab(i: Int) {
+        if (restoring) return
+        currentTab = i
+        showFavs = false
+        showHist = false
+        styleTabs()
+        updateHeadButtons()
+        reload()
+        if (searchBox.text.isNotEmpty()) searchBox.text.clear()
+    }
+
     private fun styleTabs() {
-        val sel = tabs.selectedTabPosition
-        for (i in 0 until tabs.tabCount) {
-            val v = tabs.getTabAt(i)?.customView ?: continue
-            val on = i == sel
+        for (i in 0 until tabRow.childCount) {
+            val v = tabRow.getChildAt(i) ?: continue
+            val on = i == currentTab
             val label = v.findViewById<TextView>(R.id.tabLabel)
             val icon = v.findViewById<ImageView>(R.id.tabIcon)
             v.background = if (on) tabActiveBg() else null
@@ -393,12 +449,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun ensureProfile() {
+        // Entrada directa: sin crear perfil ni picker al inicio.
+        // Si no hay perfiles se crea "Principal" en silencio; si los hay se entra
+        // con el último usado (o el primero). El chip abre el picker para gestionar.
         if (Profiles.profiles().isEmpty()) {
-            startActivityForResult(Intent(this, CreateProfileActivity::class.java), REQ_CREATE)
-        } else if (Profiles.sessionId().isEmpty()) {
-            startActivityForResult(Intent(this, ProfilePickerActivity::class.java), REQ_PICKER)
+            val id = Profiles.add("Principal", Profiles.DEFAULT_COLOR, "", 0, "")
+            applyProfile(id)
         } else {
-            applyProfile(Profiles.sessionId())
+            val sid = Profiles.sessionId()
+            applyProfile(if (Profiles.detail(sid) != null) sid else Profiles.profiles()[0].id)
         }
     }
 
@@ -407,14 +466,10 @@ class MainActivity : AppCompatActivity() {
         val pid = data?.getStringExtra(ProfilePickerActivity.EXTRA_PID)
         when (requestCode) {
             REQ_PICKER, REQ_CREATE -> {
+                // Cambio manual desde el chip: entra al elegido (el picker ya pidió PIN si toca).
+                // Si cancela, se queda donde estaba.
                 if (resultCode == RESULT_OK && pid != null) {
                     applyProfile(pid)
-                } else if (Profiles.profiles().isEmpty()) {
-                    startActivityForResult(Intent(this, CreateProfileActivity::class.java), REQ_CREATE)
-                } else if (Profiles.sessionId().isEmpty()) {
-                    finish()
-                } else {
-                    applyProfile(Profiles.sessionId())
                 }
             }
         }
@@ -430,9 +485,6 @@ class MainActivity : AppCompatActivity() {
 
         val p = Profiles.detail(pid)
         proAvatar.set(p?.photo, accent, p?.avatar ?: 0)
-
-        tabs.setSelectedTabIndicatorColor(accent)
-        tabs.setTabTextColors(Color.parseColor("#a3a6ad"), accent)
 
         streamAdapter.setFavs(favsAsStreams())
         styleTabs()
