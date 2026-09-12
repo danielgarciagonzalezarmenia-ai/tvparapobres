@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     private var visibleLive = 0
     private var loadingMore = false
     private var searching = false
-    private var accent = Profiles.accentArgb()
+    private var accent: Int = Color.parseColor(Profiles.DEFAULT_COLOR)
     private var tvMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         Profiles.init(applicationContext)
+        accent = Profiles.accentArgb()
         tvMode = isTvDevice(this)
 
         grid = findViewById(R.id.grid)
