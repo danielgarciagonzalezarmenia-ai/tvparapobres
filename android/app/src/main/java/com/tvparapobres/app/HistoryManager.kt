@@ -6,17 +6,25 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Historial de reproducción persistente.
+ * Historial de reproducción persistente, aislado por perfil.
  * Cada entrada: {key, name, logo, type, url, position, duration, ts}
  * key = "live:{id}" | "vod:{id}" | "ser:{epId}"
  */
 object HistoryManager {
     private const val MAX = 100
-    private lateinit var sp: SharedPreferences
+    private var appCtx: Context? = null
+    private var sp: SharedPreferences? = null
 
-    fun init(ctx: Context) {
-        sp = ctx.getSharedPreferences("tvpp_history", Context.MODE_PRIVATE)
+    fun init(ctx: Context, profileId: String) {
+        appCtx = ctx.applicationContext
+        sp = appCtx?.getSharedPreferences("tvpp_history_$profileId", Context.MODE_PRIVATE)
     }
+
+    fun setProfile(profileId: String) {
+        sp = appCtx?.getSharedPreferences("tvpp_history_$profileId", Context.MODE_PRIVATE)
+    }
+
+    private fun prefs(): SharedPreferences = sp ?: throw IllegalStateException("HistoryManager.init() no llamado")
 
     fun save(entry: JSONObject) {
         val arr = loadArray()
@@ -28,7 +36,7 @@ object HistoryManager {
             if (e.optString("key") != key) out.put(e)
             if (out.length() >= MAX) break
         }
-        sp.edit().putString("hist", out.toString()).apply()
+        prefs().edit().putString("hist", out.toString()).apply()
     }
 
     fun loadAll(): List<JSONObject> {
@@ -48,7 +56,21 @@ object HistoryManager {
             }
             out.put(e)
         }
-        sp.edit().putString("hist", out.toString()).apply()
+        if (out.length() == 0) return
+        prefs().edit().putString("hist", out.toString()).apply()
+    }
+
+    /** Toca solo el timestamp (para canales en vivo al saltar de canal). */
+    fun touchTs(key: String) {
+        val arr = loadArray()
+        val out = JSONArray()
+        for (i in 0 until arr.length()) {
+            val e = arr.getJSONObject(i)
+            if (e.optString("key") == key) e.put("ts", System.currentTimeMillis())
+            out.put(e)
+        }
+        if (out.length() == 0) return
+        prefs().edit().putString("hist", out.toString()).apply()
     }
 
     fun remove(key: String) {
@@ -58,11 +80,11 @@ object HistoryManager {
             val e = arr.getJSONObject(i)
             if (e.optString("key") != key) out.put(e)
         }
-        sp.edit().putString("hist", out.toString()).apply()
+        prefs().edit().putString("hist", out.toString()).apply()
     }
 
     private fun loadArray(): JSONArray {
-        val raw = sp.getString("hist", "[]") ?: "[]"
+        val raw = prefs().getString("hist", "[]") ?: "[]"
         return try { JSONArray(raw) } catch (_: Exception) { JSONArray() }
     }
 }

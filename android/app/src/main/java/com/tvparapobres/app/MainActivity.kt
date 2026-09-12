@@ -11,6 +11,8 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -25,37 +27,82 @@ import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private const val PAGE = 240
+        private const val REQ_PICKER = 11
+        private const val REQ_CREATE = 12
+        private const val TAB_FAV = 3
+        private const val TAB_HIST = 4
+    }
+
     private lateinit var grid: RecyclerView
     private lateinit var catRow: LinearLayout
-    private lateinit var loading: View
+    private lateinit var catScroller: View
+    private lateinit var loading: ProgressBar
     private lateinit var tabs: TabLayout
     private lateinit var searchBox: EditText
+    private lateinit var btnProfile: TextView
     private lateinit var streamAdapter: StreamAdapter
 
     private var currentTab = 0
     private var cats = emptyList<Cat>()
     private val catButtons = mutableListOf<MaterialButton>()
     private var allItems = emptyList<Strm>()
+    private var visibleLive = 0
+    private var loadingMore = false
+    private var searching = false
+    private var accent = Profiles.accentArgb()
+    private var tvMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        HistoryManager.init(applicationContext)
+        Profiles.init(applicationContext)
+        tvMode = isTvDevice(this)
 
         grid = findViewById(R.id.grid)
         catRow = findViewById(R.id.catRow)
+        catScroller = findViewById(R.id.catScroller)
         loading = findViewById(R.id.loading)
         tabs = findViewById(R.id.tabLayout)
         searchBox = findViewById(R.id.searchBox)
+        btnProfile = findViewById(R.id.btnProfile)
 
         findViewById<View>(R.id.btnDonate).setOnClickListener {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://tvparapobres.tipsterpage.com/kttCMjB2")))
         }
+        btnProfile.setOnClickListener {
+            startActivityForResult(Intent(this, ProfilePickerActivity::class.java), REQ_PICKER)
+        }
 
-        grid.layoutManager = GridLayoutManager(this, 3)
-        streamAdapter = StreamAdapter(::openStream, isTvDevice(this))
+        val cols = when {
+            tvMode -> 6
+            resources.configuration.screenWidthDp >= 600 -> 4
+            else -> 3
+        }
+        grid.setHasFixedSize(true)
+        grid.itemAnimator = null
+        grid.setItemViewCacheSize(60)
+        val glm = GridLayoutManager(this, cols)
+        glm.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int): Int =
+                if (streamAdapter.getItemViewType(position) == StreamAdapter.TYPE_MORE) cols else 1
+        }
+        grid.layoutManager = glm
+        streamAdapter = StreamAdapter(accent, tvMode, ::openItem, ::toggleFav, ::loadMore)
         grid.adapter = streamAdapter
+
+        grid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                if (currentTab != 0 || searching) return
+                val lm = rv.layoutManager as GridLayoutManager
+                val total = rv.adapter?.itemCount ?: 0
+                if (lm.findLastVisibleItemPosition() >= total - 8 && streamAdapter.hasMore() && !loadingMore) {
+                    loadMore()
+                }
+            }
+        })
 
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
@@ -75,39 +122,172 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        ensureProfile()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && tvMode && currentTab == 0 && streamAdapter.itemCount > 0) {
+            grid.post { grid.requestFocus() }
+        }
+    }
+
+    private fun ensureProfile() {
+        if (Profiles.profiles().isEmpty()) {
+            startActivityForResult(Intent(this, CreateProfileActivity::class.java), REQ_CREATE)
+        } else if (Profiles.sessionId().isEmpty()) {
+            startActivityForResult(Intent(this, ProfilePickerActivity::class.java), REQ_PICKER)
+        } else {
+            applyProfile(Profiles.sessionId())
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val pid = data?.getStringExtra(ProfilePickerActivity.EXTRA_PID)
+        when (requestCode) {
+            REQ_PICKER, REQ_CREATE -> {
+                if (resultCode == RESULT_OK && pid != null) {
+                    applyProfile(pid)
+                } else if (Profiles.profiles().isEmpty()) {
+                    startActivityForResult(Intent(this, CreateProfileActivity::class.java), REQ_CREATE)
+                } else if (Profiles.sessionId().isEmpty()) {
+                    finish()
+                } else {
+                    applyProfile(Profiles.sessionId())
+                }
+            }
+        }
+    }
+
+    private fun applyProfile(pid: String) {
+        Profiles.setActive(pid)
+        Profiles.remember(pid)
+        HistoryManager.init(this, pid)
+        FavoritesManager.init(this, pid)
+        accent = Profiles.accentArgb(Profiles.detail(pid)?.color)
+        streamAdapter.accent = accent
+
+        val p = Profiles.detail(pid)
+        btnProfile.text = p?.name?.firstOrNull()?.uppercase() ?: "?"
+        val avatarBg = android.graphics.drawable.GradientDrawable()
+        avatarBg.shape = android.graphics.drawable.GradientDrawable.OVAL
+        avatarBg.setColor(accent)
+        btnProfile.background = avatarBg
+        btnProfile.setTextColor(Color.WHITE)
+
+        tabs.setSelectedTabIndicatorColor(accent)
+        tabs.setTabTextColors(Color.parseColor("#a3a6ad"), accent)
+        loading.indeterminateTintList = ColorStateList.valueOf(accent)
+
+        streamAdapter.setFavs(favsAsStreams())
         reload()
     }
 
+    private fun favsAsStreams(): List<Strm> =
+        FavoritesManager.load().map { e ->
+            Strm(
+                id = e.optString("id", ""),
+                name = e.optString("name", "Sin título"),
+                icon = e.optString("logo", ""),
+                ext = e.optString("ext", ""),
+                type = e.optString("type", "live")
+            )
+        }
+
     private fun filterSearch(q: String) {
         if (q.isBlank()) {
-            streamAdapter.submit(allItems)
+            searching = false
+            if (currentTab == 0) {
+                visibleLive = 0
+                loadingMore = false
+                showLivePage(initial = true)
+            } else {
+                streamAdapter.submit(allItems)
+                streamAdapter.setHasMore(false)
+            }
             return
         }
+        searching = true
         val lower = q.lowercase()
-        streamAdapter.submit(allItems.filter { it.name.lowercase().contains(lower) })
+        val filtered = allItems.filter { it.name.lowercase().contains(lower) }
+        streamAdapter.submit(filtered)
+        streamAdapter.setHasMore(false)
+        grid.scrollToPosition(0)
     }
 
     private fun reload() {
+        searching = false
+        visibleLive = 0
+        loadingMore = false
+        streamAdapter.setHasMore(false)
+        when (currentTab) {
+            0 -> loadLive()
+            1, 2 -> loadCats()
+            TAB_FAV -> loadFavs()
+            TAB_HIST -> loadHistory()
+        }
+    }
+
+    private fun setBusy(b: Boolean) {
+        loading.visibility = if (b) View.VISIBLE else View.GONE
+        grid.visibility = if (b) View.GONE else View.VISIBLE
+    }
+
+    private fun loadLive() {
+        catScroller.visibility = View.GONE
+        setBusy(true)
+        lifecycleScope.launch {
+            val list = try {
+                withContext(Dispatchers.IO) { Xtream.liveAll() }
+            } catch (e: Exception) {
+                emptyList<Strm>()
+            }
+            if (list.isEmpty()) {
+                Toast.makeText(this@MainActivity, "Sin respuesta del proveedor", Toast.LENGTH_LONG).show()
+                setBusy(false)
+                return@launch
+            }
+            allItems = Xtream.liveSorter(list)
+            streamAdapter.setFavs(favsAsStreams())
+            showLivePage(initial = true)
+            setBusy(false)
+        }
+    }
+
+    private fun showLivePage(initial: Boolean) {
+        val all = allItems
+        val target = minOf(visibleLive + PAGE, all.size)
+        val chunk = all.subList(visibleLive, target)
+        if (initial) {
+            visibleLive = 0
+            streamAdapter.submit(all.subList(0, minOf(PAGE, all.size)))
+            visibleLive = all.subList(0, minOf(PAGE, all.size)).size
+        } else {
+            streamAdapter.append(chunk)
+            visibleLive = target
+        }
+        streamAdapter.setHasMore(visibleLive < all.size)
+    }
+
+    private fun loadMore() {
+        if (loadingMore) return
+        if (visibleLive >= allItems.size) return
+        loadingMore = true
+        showLivePage(initial = false)
+        loadingMore = false
+    }
+
+    private fun loadCats() {
+        catScroller.visibility = View.VISIBLE
         setBusy(true)
         catRow.removeAllViews()
         catButtons.clear()
         cats = emptyList()
-        allItems = emptyList()
-        streamAdapter.submit(emptyList())
-
-        if (currentTab == 3) {
-            loadHistory()
-            return
-        }
-
         lifecycleScope.launch {
             val res = try {
                 withContext(Dispatchers.IO) {
-                    when (currentTab) {
-                        0 -> Xtream.liveCategories()
-                        1 -> Xtream.vodCategories()
-                        else -> Xtream.seriesCategories()
-                    }
+                    if (currentTab == 1) Xtream.vodCategories() else Xtream.seriesCategories()
                 }
             } catch (e: Exception) {
                 emptyList<Cat>()
@@ -123,13 +303,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun loadFavs() {
+        catScroller.visibility = View.GONE
+        setBusy(true)
+        allItems = favsAsStreams()
+        streamAdapter.setFavs(allItems)
+        streamAdapter.submit(allItems)
+        streamAdapter.setHasMore(false)
+        setBusy(false)
+        if (allItems.isEmpty()) Toast.makeText(this, "Sin favoritos todavía", Toast.LENGTH_SHORT).show()
+    }
+
     private fun loadHistory() {
+        catScroller.visibility = View.GONE
+        setBusy(false)
         catRow.removeAllViews()
         val entries = HistoryManager.loadAll()
         if (entries.isEmpty()) {
             streamAdapter.submit(emptyList())
+            streamAdapter.setHasMore(false)
             Toast.makeText(this, "Sin historial", Toast.LENGTH_SHORT).show()
-            setBusy(false)
             return
         }
         val items = entries.map { e ->
@@ -142,8 +335,9 @@ class MainActivity : AppCompatActivity() {
             )
         }
         allItems = items
+        streamAdapter.setFavs(favsAsStreams())
         streamAdapter.submit(items)
-        setBusy(false)
+        streamAdapter.setHasMore(false)
     }
 
     private fun paintCats() {
@@ -159,7 +353,7 @@ class MainActivity : AppCompatActivity() {
             btn.insetBottom = 0
             btn.minHeight = 0
             btn.cornerRadius = 20
-            if (isTvDevice(this)) {
+            if (tvMode) {
                 btn.isFocusable = true
                 btn.isFocusableInTouchMode = true
             }
@@ -177,22 +371,15 @@ class MainActivity : AppCompatActivity() {
         styleCats(null)
     }
 
-    private var selectedColor = 0
-    private var unselectedColor = 0
-
     private fun styleCats(selected: Cat?) {
-        selectedColor = 0xFFFF4D2E.toInt()
-        unselectedColor = 0x00131318
+        val selBg = (accent and 0x00FFFFFF) or 0x24000000.toInt()
+        val unselBg = 0xFF121316.toInt()
         for ((i, cat) in cats.withIndex()) {
             val btn = catButtons[i]
             val isSel = cat == selected
-            btn.setTextColor(Color.WHITE)
-            btn.backgroundTintList = ColorStateList.valueOf(
-                if (isSel) selectedColor else unselectedColor
-            )
-            btn.strokeColor = ColorStateList.valueOf(
-                if (isSel) 0xFFFF4D2E.toInt() else 0x1AFFFFFF.toInt()
-            )
+            btn.setTextColor(if (isSel) Color.WHITE else 0xFFA3A6AD.toInt())
+            btn.backgroundTintList = ColorStateList.valueOf(if (isSel) selBg else unselBg)
+            btn.strokeColor = ColorStateList.valueOf(if (isSel) accent else 0x12FFFFFF.toInt())
         }
     }
 
@@ -202,46 +389,68 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val list = try {
                 withContext(Dispatchers.IO) {
-                    when (currentTab) {
-                        0 -> Xtream.liveStreams(cat.id)
-                        1 -> Xtream.vodStreams(cat.id)
-                        else -> Xtream.series(cat.id)
-                    }
+                    if (currentTab == 1) Xtream.vodStreams(cat.id) else Xtream.series(cat.id)
                 }
             } catch (e: Exception) {
                 emptyList<Strm>()
             }
             allItems = list
+            streamAdapter.setFavs(favsAsStreams())
             streamAdapter.submit(list)
+            streamAdapter.setHasMore(false)
             setBusy(false)
         }
     }
 
-    private fun setBusy(b: Boolean) {
-        loading.visibility = if (b) View.VISIBLE else View.GONE
-        grid.visibility = if (b) View.GONE else View.VISIBLE
+    private fun toggleFav(s: Strm) {
+        val item = JSONObject().apply {
+            put("id", s.id)
+            put("name", s.name)
+            put("logo", s.icon)
+            put("type", s.type)
+            put("ext", s.ext)
+            put("ts", System.currentTimeMillis())
+        }
+        val (_, added) = FavoritesManager.toggle(item)
+        streamAdapter.applyFav(s, added)
+        Toast.makeText(this, if (added) "Guardado en favoritos" else "Quitado de favoritos", Toast.LENGTH_SHORT).show()
+        if (currentTab == TAB_FAV) reload()
     }
 
-    private fun openStream(s: Strm) {
-        if (currentTab == 3) {
+    private fun openItem(s: Strm) {
+        if (currentTab == TAB_HIST) {
             openFromHistory(s)
             return
         }
-        if (s.type == "series") {
+        if (currentTab == TAB_FAV && s.type == "series") {
             val i = Intent(this, SeriesActivity::class.java)
             i.putExtra("seriesId", s.id)
             i.putExtra("seriesName", s.name)
+            i.putExtra("pid", Profiles.sessionId())
             startActivity(i)
             return
         }
-        val url = if (s.type == "live") Accounts.liveUrl(s.id) else Accounts.movieUrl(s.id, s.ext)
-        val key = if (s.type == "live") "live:${s.id}" else "vod:${s.id}"
+        play(s, s.type)
+    }
+
+    private fun play(s: Strm, type: String) {
+        val isLive = type == "live"
+        val url = when (type) {
+            "live" -> Accounts.liveUrl(s.id)
+            "series" -> Accounts.seriesUrl(s.id, s.ext)
+            else -> Accounts.movieUrl(s.id, s.ext)
+        }
+        val key = when (type) {
+            "live" -> "live:${s.id}"
+            "series" -> "ser:${s.id}"
+            else -> "vod:${s.id}"
+        }
         val entry = JSONObject().apply {
             put("key", key)
             put("id", s.id)
             put("name", s.name)
             put("logo", s.icon)
-            put("type", s.type)
+            put("type", type)
             put("ext", s.ext)
             put("url", url)
             put("position", 0)
@@ -254,6 +463,8 @@ class MainActivity : AppCompatActivity() {
         i.putExtra("url", url)
         i.putExtra("title", s.name)
         i.putExtra("histKey", key)
+        i.putExtra("isLive", isLive)
+        i.putExtra("pid", Profiles.sessionId())
         startActivity(i)
     }
 
@@ -271,7 +482,9 @@ class MainActivity : AppCompatActivity() {
         i.putExtra("url", url)
         i.putExtra("title", s.name)
         i.putExtra("histKey", key)
+        i.putExtra("isLive", key.startsWith("live:"))
         i.putExtra("startPosition", pos)
+        i.putExtra("pid", Profiles.sessionId())
         startActivity(i)
     }
 }

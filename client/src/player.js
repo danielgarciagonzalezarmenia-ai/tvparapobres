@@ -5,12 +5,14 @@ let video = null
 let mp = null
 let hls = null
 let currentUrl = null
-let reconnectTries = 0
 let baseTime = 0
 let connectTimer = null
 let gotPlay = false
 let timedOut = false
-const MAX_RETRIES = 4
+let retryCount = 0
+let mode = 'mse' // mse | native | hls
+let isLive = true
+const MAX_RETRIES = 6
 const CONNECT_TIMEOUT_MS = 30000
 const STALL_TIMEOUT_MS = 6000
 const STALL_POLL_MS = 2000
@@ -37,6 +39,7 @@ const clearConnectTimer = () => {
 
 const markPlayed = () => {
   gotPlay = true
+  retryCount = 0
   clearConnectTimer()
   startStallWatcher()
 }
@@ -51,7 +54,7 @@ function clearStallWatcher() {
 
 function startStallWatcher() {
   clearStallWatcher()
-  if (!video) return
+  if (!video || mode === 'native') return
   let lastProgress = Date.now()
   const onTu = () => { lastProgress = Date.now() }
   video.addEventListener('timeupdate', onTu)
@@ -66,17 +69,42 @@ function startStallWatcher() {
 function restartPlayback(_why) {
   clearStallWatcher()
   clearConnectTimer()
-  if (reconnectTries > 6) reconnectTries = 6
-  reconnectTries++
-  emit({ type: 'notice', message: `Reconectando (${reconnectTries})…` })
-  const wait = Math.min(1500 + reconnectTries * 1000, 9000)
+  retryCount++
+  const backoff =
+    retryCount <= 3 ? 800 + retryCount * 700
+    : retryCount <= 8 ? 3000 + (retryCount - 3) * 2500
+    : 12000
+  if (mode === 'native') {
+    if (retryCount > MAX_RETRIES) {
+      emit({ type: 'error', message: 'No se pudo mantener la conexión' })
+      return
+    }
+    emit({ type: 'notice', message: `Volviendo a conectar (${retryCount})…` })
+  } else if (retryCount > 6) {
+    emit({ type: 'error', message: 'Señal perdida. Reintentando automáticamente…' })
+  } else {
+    emit({ type: 'notice', message: `Reconectando (${retryCount})…` })
+  }
   setTimeout(() => {
     if (!currentUrl || !video) return
-    try { mp?.destroy() } catch { /* noop */ }
-    mp = null
     gotPlay = false
-    startMse(currentUrl)
-  }, wait)
+    timedOut = false
+    if (mode === 'mse') {
+      try { mp?.destroy() } catch { /* noop */ }
+      mp = null
+      startMse(currentUrl, isLive)
+    } else if (mode === 'hls') {
+      try { hls?.destroy() } catch { /* noop */ }
+      hls = null
+      startHls(currentUrl)
+    } else {
+      video.removeAttribute('src')
+      video.load()
+      video.src = currentUrl
+      video.play().catch(() => {})
+      armConnectTimeout()
+    }
+  }, backoff)
 }
 
 const armConnectTimeout = () => {
@@ -86,17 +114,14 @@ const armConnectTimeout = () => {
     if (gotPlay || !currentUrl) return
     timedOut = true
     currentUrl = null
-    reconnectTries = MAX_RETRIES
     try { mp?.destroy() } catch { /* noop */ }
     try { hls?.destroy() } catch { /* noop */ }
     mp = null
     hls = null
-    if (video) {
-      video.pause()
-      video.removeAttribute('src')
-      video.load()
-    }
-    emit({ type: 'error', message: 'No se encontró un servidor para este canal' })
+    video.pause()
+    video.removeAttribute('src')
+    video.load()
+    emit({ type: 'error', message: 'No se encontró un servidor para este contenido' })
   }, CONNECT_TIMEOUT_MS)
 }
 
@@ -105,13 +130,14 @@ export function stopPlayback() {
   clearStallWatcher()
   gotPlay = false
   timedOut = false
+  retryCount = 0
   try { mp?.destroy() } catch { /* noop */ }
   try { hls?.destroy() } catch { /* noop */ }
   mp = null
   hls = null
   currentUrl = null
-  reconnectTries = 0
   baseTime = 0
+  mode = 'mse'
   if (video) {
     video.pause()
     video.removeAttribute('src')
@@ -127,7 +153,7 @@ export function getPlaybackState() {
   return { position: Math.round((baseTime + cur) * 10) / 10, duration }
 }
 
-function startMse(url, isLive = true) {
+function startMse(url, _live = true) {
   mp = mpegts.createPlayer(
     { type: 'mse', isLive, url },
     {
@@ -146,8 +172,7 @@ function startMse(url, isLive = true) {
     }
   )
 
-  mp.on(mpegts.Events.ERROR, (_type, data) => {
-    emit({ type: 'error', message: 'Error de transmisión', data })
+  mp.on(mpegts.Events.ERROR, () => {
     if (!currentUrl || !video) return
     restartPlayback('error')
   })
@@ -156,6 +181,23 @@ function startMse(url, isLive = true) {
   mp.load()
   mp.play().catch(() => { if (!timedOut) emit({ type: 'notice', message: 'Esperando señal…' }) })
   emit({ type: 'connecting' })
+  armConnectTimeout()
+}
+
+function startHls(url) {
+  hls = new Hls({ liveDurationInfinity: true, enableWorker: true })
+  hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}) })
+  hls.on(Hls.Events.ERROR, (_e, d) => {
+    if (!d.fatal || !currentUrl || !video) return
+    if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+      restartPlayback('red hls')
+    } else {
+      hls.recoverMediaError()
+      setTimeout(() => restartPlayback('hls media'), 2000)
+    }
+  })
+  hls.loadSource(url)
+  hls.attachMedia(video)
   armConnectTimeout()
 }
 
@@ -172,16 +214,12 @@ export async function playURL(url, opts = {}) {
   emit({ type: 'loading', url })
 
   if (low.includes('.m3u8')) {
+    isLive = true
+    mode = 'hls'
     if (Hls.isSupported()) {
-      hls = new Hls({ liveDurationInfinity: true, enableWorker: true })
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(() => {}) })
-      hls.on(Hls.Events.ERROR, (_e, d) => {
-        if (d.fatal) emit({ type: 'error', message: 'Error al cargar el stream HLS', data: d })
-      })
-      hls.loadSource(url)
-      hls.attachMedia(video)
-      armConnectTimeout()
+      startHls(url)
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      mode = 'native'
       video.src = url
       armConnectTimeout()
     } else {
@@ -191,6 +229,12 @@ export async function playURL(url, opts = {}) {
   }
 
   if (/\.(mp4|webm|mov|m4v|ogv|ogg)$/.test(low) || low.includes('/api/rt/vod/') || low.includes('/api/rt/series/')) {
+    mode = 'native'
+    isLive = false
+    video.addEventListener('error', () => {
+      if (timedOut || !currentUrl) return
+      restartPlayback('error de video')
+    })
     video.src = url
     emit({ type: 'connecting' })
     armConnectTimeout()
@@ -208,7 +252,8 @@ export async function playURL(url, opts = {}) {
   }
 
   if (mpegts.isSupported()) {
-    const isLive = !low.includes('/api/stream/')
+    isLive = !low.includes('/api/stream/')
+    mode = 'mse'
     if (opts.start > 0 && !isLive) baseTime = opts.start
     let target = url
     if (opts.start > 0 && !isLive) {
@@ -216,6 +261,7 @@ export async function playURL(url, opts = {}) {
     }
     startMse(target, isLive)
   } else {
+    mode = 'native'
     video.src = url
     emit({ type: 'connecting' })
     armConnectTimeout()

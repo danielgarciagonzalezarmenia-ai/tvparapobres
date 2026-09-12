@@ -36,6 +36,7 @@ export const api = {
   liveAll: () => get('/api/all-live'),
   vodAll: () => get('/api/all-vod'),
   seriesAll: () => get('/api/all-series'),
+  epg: (id) => get(`/api/epg/${encodeURIComponent(id)}`),
   meta: () => get('/api/meta')
 }
 

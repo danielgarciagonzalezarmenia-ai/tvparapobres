@@ -1,37 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
     app:cardBackgroundColor="@color/panel"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="0dp">
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
+    app:rippleColor="#33ff4d2e"
+    app:strokeColor="@color/white10"
+    app:strokeWidth="1dp">
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="wrap_content">
 
-        <ImageView
-            android:id="@+id/logo"
-            android:layout_width="match_parent"
-            android:layout_height="110dp"
-            android:background="@color/panel2"
-            android:contentDescription="logo"
-            android:padding="10dp"
-            android:scaleType="fitCenter" />
-
-        <TextView
-            android:id="@+id/name"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:fontFamily="sans-serif-medium"
-            android:maxLines="2"
-            android:padding="8dp"
-            android:textColor="@color/textPrimary"
-            android:textSize="12sp" />
-    </LinearLayout>
-</androidx.cardview.widget.CardView>
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/logo"
+                android:layout_width="match_parent"
+                android:layout_height="110dp"
+                android:background="@drawable/bg_card_logo"
+                android:contentDescription="logo"
+                android:padding="10dp"
+                android:scaleType="fitCenter" />
+
+            <TextView
+                android:id="@+id/name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="2"
+                android:paddingHorizontal="10dp"
+                android:paddingBottom="11dp"
+                android:paddingTop="9dp"
+                android:textColor="@color/textPrimary"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnFav"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="7dp"
+            android:background="@drawable/bg_fav"
+            android:fontFamily="sans-serif"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:text="☆"
+            android:textColor="#ffffff"
+            android:textSize="22sp" />
+    </FrameLayout>
+</com.google.android.material.card.MaterialCardView>

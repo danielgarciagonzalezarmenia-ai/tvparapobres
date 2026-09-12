@@ -24,4 +24,68 @@
         android:padding="8dp"
         android:textColor="@color/textPrimary"
         android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/epgText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="6dp"
+        android:layout_marginEnd="10dp"
+        android:background="#cc000000"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif"
+        android:maxLines="2"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="6dp"
+        android:textColor="@color/textSecondary"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:id="@+id/bottomBar"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:layout_gravity="bottom"
+        android:background="#dd000000"
+        android:paddingHorizontal="18dp">
+
+        <TextView
+            android:id="@+id/btnPrev"
+            android:layout_width="94dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_channel_btn"
+            android:fontFamily="sans-serif-black"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:text="‹ CANAL"
+            android:textColor="#ffffff"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/btnNext"
+            android:layout_width="94dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="end"
+            android:background="@drawable/bg_channel_btn"
+            android:fontFamily="sans-serif-black"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:text="CANAL ›"
+            android:textColor="#ffffff"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/chanInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:paddingHorizontal="110dp"
+            android:textColor="@color/textPrimary"
+            android:textSize="13sp" />
+    </FrameLayout>
 </FrameLayout>

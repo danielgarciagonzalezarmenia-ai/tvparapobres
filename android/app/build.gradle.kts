@@ -1,3 +1,9 @@
+import javax.imageio.ImageIO
+import java.awt.image.BufferedImage
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.Color
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -11,8 +17,8 @@ android {
         applicationId = "com.tvparapobres.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
     }
 
     signingConfigs {
@@ -58,3 +64,43 @@ dependencies {
     implementation("com.google.android.exoplayer:exoplayer:2.19.1")
     implementation("com.google.android.exoplayer:exoplayer-hls:2.19.1")
 }
+
+// Genera banner (logo horizontal) e iconos circular/legacy (logo cuadrado)
+// a partir de los logos del proyecto.
+tasks.register("generateBrandAssets") {
+    val logoWide = file("src/main/res/drawable-nodpi/logo_proyecto.png")
+    val logoSquare = file("../../assets/icon.png")
+    inputs.file(logoWide)
+    inputs.file(logoSquare)
+    outputs.file("src/main/res/drawable-nodpi/banner.png")
+    outputs.file("src/main/res/drawable-nodpi/ic_fg_logo.png")
+    outputs.file("src/main/res/mipmap-anydpi/ic_launcher.png")
+    doLast {
+        val wide = ImageIO.read(logoWide)
+        val square = if (logoSquare.exists()) ImageIO.read(logoSquare) else wide
+        fun compose(src: BufferedImage, targetW: Int, targetH: Int, contentW: Int): BufferedImage {
+            val canvas = BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_ARGB)
+            val g: Graphics2D = canvas.createGraphics()
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g.color = Color(6, 6, 8)
+            g.fillRect(0, 0, targetW, targetH)
+            val aspect = src.width.toDouble() / src.height.toDouble()
+            var cw = contentW
+            var ch = (cw / aspect).toInt()
+            if (ch > targetH - 6) {
+                ch = targetH - 6
+                cw = (ch * aspect).toInt()
+            }
+            val x = (targetW - cw) / 2
+            val y = (targetH - ch) / 2
+            g.drawImage(src, x, y, x + cw, y + ch, 0, 0, src.width, src.height, null)
+            g.dispose()
+            return canvas
+        }
+        ImageIO.write(compose(wide, 320, 180, 292), "png", file("src/main/res/drawable-nodpi/banner.png"))
+        ImageIO.write(compose(square, 1024, 1024, 860), "png", file("src/main/res/drawable-nodpi/ic_fg_logo.png"))
+        ImageIO.write(compose(square, 432, 432, 420), "png", file("src/main/res/mipmap-anydpi/ic_launcher.png"))
+    }
+}
+tasks.named("preBuild") { dependsOn("generateBrandAssets") }

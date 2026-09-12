@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/profileCard"
+    android:layout_width="150dp"
+    android:layout_height="wrap_content"
+    android:layout_margin="10dp"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
+    android:foreground="@drawable/bg_card_focus"
+    app:cardBackgroundColor="@color/panel"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/white10"
+    app:strokeWidth="1dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:id="@+id/profileAvatar"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="8dp"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:textColor="#ffffff"
+                android:textSize="26sp" />
+
+            <TextView
+                android:id="@+id/profileName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-black"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textColor="@color/textPrimary"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/profileLock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="6dp"
+                android:background="@drawable/bg_donate"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="3dp"
+                android:text="🔒 PIN"
+                android:textColor="#ffffff"
+                android:textSize="10sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/profileDelete"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="4dp"
+            android:background="@drawable/bg_donate"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:text="✕"
+            android:textColor="#ffffff"
+            android:textSize="14sp"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:visibility="gone" />
+    </FrameLayout>
+</com.google.android.material.card.MaterialCardView>

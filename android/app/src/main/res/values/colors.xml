@@ -1,11 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#0a0a0c</color>
-    <color name="panel">#131318</color>
-    <color name="panel2">#1a1a22</color>
+    <color name="black">#060608</color>
+    <color name="bg2">#0a0a0d</color>
+    <color name="panel">#121316</color>
+    <color name="panel2">#17191d</color>
+    <color name="panel3">#1f2228</color>
     <color name="accent">#ff4d2e</color>
     <color name="accent2">#d6283c</color>
-    <color name="textPrimary">#f2f2f4</color>
-    <color name="textSecondary">#888894</color>
-    <color name="white10">#1affffff</color>
+    <color name="accentStrong">#ff8a66</color>
+    <color name="accentSoft">#24ff4d2e</color>
+    <color name="accentLine">#73ff4d2e</color>
+    <color name="textPrimary">#f2f3f5</color>
+    <color name="textSecondary">#a3a6ad</color>
+    <color name="textMuted">#6e747c</color>
+    <color name="green">#66d9a8</color>
+    <color name="red">#fb2c36</color>
+    <color name="redSoft">#ff8a91</color>
+    <color name="redPale">#1afb2c36</color>
+    <color name="white10">#12ffffff</color>
+    <color name="white7">#0bffffff</color>
 </resources>

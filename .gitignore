@@ -22,3 +22,8 @@ release/*.exe
 release/apk/*.apk
 release/builder-debug.yml
 release/.icon-ico
+
+# Logos generados por Gradle (generateBrandAssets en preBuild)
+android/app/src/main/res/drawable-nodpi/banner.png
+android/app/src/main/res/drawable-nodpi/ic_fg_logo.png
+android/app/src/main/res/mipmap-anydpi/ic_launcher.png

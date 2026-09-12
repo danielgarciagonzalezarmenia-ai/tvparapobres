@@ -207,6 +207,9 @@ export const getSeriesCategories = () => get('get_series_categories', {}, 60 * 6
 export const getSeries = (categoryId) => get('get_series', { category_id: categoryId }, 12 * 60 * 60 * 1000).then((l) => cleanStreams(l))
 export const getSeriesInfo = (seriesId) => get('get_series_info', { series_id: seriesId }, 24 * 60 * 60 * 1000)
 
+// Guía de programación corta (listado de emisiones recientes/próximas del canal).
+export const getShortEpg = (streamId) => get('get_short_epg', { stream_id: streamId }, 5 * 60 * 1000)
+
 // Listados globales ("Todos") para búsqueda: versiones reducidas para no mover megas.
 const slim = (list) =>
   Array.isArray(list)

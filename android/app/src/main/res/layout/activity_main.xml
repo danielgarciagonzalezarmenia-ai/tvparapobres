@@ -17,15 +17,34 @@
         android:paddingTop="14dp"
         android:paddingBottom="4dp">
 
-        <TextView
-            android:layout_width="0dp"
+        <ImageView
+            android:id="@+id/imgBrandLogo"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="TV Para Pobres"
+            android:maxHeight="34dp"
+            android:src="@drawable/logo_proyecto" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/btnProfile"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_marginEnd="10dp"
             android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.08"
-            android:text="TV PARA POBRES"
-            android:textColor="@color/textPrimary"
-            android:textSize="17sp" />
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:padding="0dp"
+            android:text="P"
+            android:textColor="#ffffff"
+            android:textSize="15sp" />
 
         <TextView
             android:id="@+id/btnDonate"
@@ -33,61 +52,72 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_donate"
             android:paddingHorizontal="14dp"
-            android:paddingVertical="6dp"
+            android:paddingVertical="7dp"
             android:text="♥ Apoyar"
-            android:textColor="@color/accent"
+            android:textColor="#ffffff"
             android:textSize="13sp"
             android:textStyle="bold"
             android:focusable="true"
             android:focusableInTouchMode="true" />
     </LinearLayout>
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
         android:layout_marginTop="2dp"
-        app:tabIndicatorColor="@color/accent"
-        app:tabSelectedTextColor="@color/accent"
-        app:tabTextColor="@color/textSecondary"
-        app:tabIndicatorHeight="3dp"
-        app:tabMode="scrollable">
+        android:background="@drawable/bg_tab_bar"
+        android:padding="4dp">
 
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="LIVE" />
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="PELÍCULAS" />
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SERIES" />
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="HISTORIAL" />
-    </com.google.android.material.tabs.TabLayout>
+            app:tabIndicatorColor="@color/accent"
+            app:tabSelectedTextColor="@color/accent"
+            app:tabTextColor="@color/textSecondary"
+            app:tabIndicatorHeight="3dp"
+            app:tabMode="scrollable">
+
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LIVE" />
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PELÍCULAS" />
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SERIES" />
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FAVORITOS" />
+            <com.google.android.material.tabs.TabItem
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="HISTORIAL" />
+        </com.google.android.material.tabs.TabLayout>
+    </FrameLayout>
 
     <EditText
         android:id="@+id/searchBox"
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="42dp"
         android:layout_marginHorizontal="12dp"
         android:layout_marginTop="6dp"
-        android:background="@color/panel"
-        android:drawableStart="@android:drawable/ic_menu_search"
+        android:background="@drawable/bg_search"
+        android:drawableStart="@drawable/ic_search"
         android:drawablePadding="8dp"
-        android:drawableTint="@color/textSecondary"
-        android:fontFamily="sans-serif"
+        android:fontFamily="sans-serif-medium"
         android:hint="Buscar..."
         android:inputType="text"
         android:maxLines="1"
         android:paddingHorizontal="12dp"
         android:textColor="@color/textPrimary"
-        android:textColorHint="@color/textSecondary"
+        android:textColorHint="@color/textMuted"
         android:textSize="14sp" />
 
     <HorizontalScrollView
@@ -103,7 +133,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp" />
+            android:paddingVertical="8dp" />
     </HorizontalScrollView>
 
     <androidx.recyclerview.widget.RecyclerView

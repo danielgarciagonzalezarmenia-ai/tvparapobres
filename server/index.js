@@ -43,6 +43,11 @@ app.get('/api/vod', wrap(async (req, res) => res.json(await xt.getVodStreams(num
 app.get('/api/series-categories', wrap(async (req, res) => res.json(await xt.getSeriesCategories())))
 app.get('/api/series', wrap(async (req, res) => res.json(await xt.getSeries(num(req.query.category_id)))))
 app.get('/api/series-info', wrap(async (req, res) => res.json(await xt.getSeriesInfo(num(req.query.series_id)))))
+app.get('/api/epg/:id', wrap(async (req, res) => {
+  const id = String(req.params.id).replace(/[^0-9]/g, '')
+  if (!id) return res.status(400).json({ error: 'ID inválido' })
+  res.json(await xt.getShortEpg(id))
+}))
 
 app.get('/api/all-live', wrap(async (req, res) => res.json(await xt.getAllLiveStreams())))
 app.get('/api/all-vod', wrap(async (req, res) => res.json(await xt.getAllVod())))

@@ -24,6 +24,10 @@ class SeriesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_series)
 
+        Profiles.init(applicationContext)
+        val pid = intent.getStringExtra("pid") ?: Profiles.sessionId()
+        HistoryManager.init(applicationContext, pid.ifBlank { "default" })
+
         epList = findViewById(R.id.epList)
         epLoading = findViewById(R.id.epLoading)
         findViewById<TextView>(R.id.epTitle).text = seriesName
@@ -62,6 +66,8 @@ class SeriesActivity : AppCompatActivity() {
                 i.putExtra("url", url)
                 i.putExtra("title", "$seriesName — Cap ${ep.num}")
                 i.putExtra("histKey", key)
+                i.putExtra("isLive", false)
+                i.putExtra("pid", pid.ifBlank { Profiles.sessionId() })
                 startActivity(i)
             }
         }
@@ -72,25 +78,27 @@ class SeriesActivity : AppCompatActivity() {
         private val onOpen: (Episode) -> Unit
     ) : RecyclerView.Adapter<EpisodeAdapter.Holder>() {
 
-        inner class Holder(val tv: TextView) : RecyclerView.ViewHolder(tv)
+        inner class Holder(val root: View) : RecyclerView.ViewHolder(root) {
+            val tv: TextView = root.findViewById(R.id.epName)
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
-            val tv = layoutInflater.inflate(R.layout.item_episode, parent, false) as TextView
+            val root = layoutInflater.inflate(R.layout.item_episode, parent, false)
             if (isTvDevice(this@SeriesActivity)) {
-                tv.isFocusable = true
-                tv.foreground = tv.context.getDrawable(R.drawable.bg_card_focus)
-                tv.setOnFocusChangeListener { view, has ->
+                root.isFocusable = true
+                root.foreground = root.context.getDrawable(R.drawable.bg_card_focus)
+                root.setOnFocusChangeListener { view, has ->
                     view.scaleX = if (has) 1.03f else 1f
                     view.scaleY = if (has) 1.03f else 1f
                 }
             }
-            return Holder(tv)
+            return Holder(root)
         }
 
         override fun onBindViewHolder(holder: Holder, position: Int) {
             val ep = eps[position]
             holder.tv.text = "Cap ${ep.num.orEmpty()} — ${NameCleaner.clean(ep.title.orEmpty())}"
-            holder.tv.setOnClickListener { onOpen(ep) }
+            holder.root.setOnClickListener { onOpen(ep) }
         }
 
         override fun getItemCount() = eps.size
