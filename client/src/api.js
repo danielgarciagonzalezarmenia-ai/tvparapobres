@@ -78,6 +78,21 @@ export function fmtTime(s) {
   return h ? `${h}:${mm}:${ss}` : `${m}:${ss}`
 }
 
+// Búsqueda normalizada (igual que el APK): limpio + sin tildes + solo [a-z0-9].
+// Así "espn" encuentra "*ESP*N", "E S P N" o "3SPN".
+const normCache = new Map()
+export function normName(s) {
+  const key = s || ''
+  let v = normCache.get(key)
+  if (v === undefined) {
+    const folded = cleanName(key).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    v = folded.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (normCache.size > 5000) normCache.clear()
+    normCache.set(key, v)
+  }
+  return v
+}
+
 export function itemName(item) {
   return cleanName(item.name ?? item.title ?? 'Sin título')
 }

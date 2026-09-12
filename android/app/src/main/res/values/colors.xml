@@ -6,10 +6,15 @@
     <color name="panel2">#17191d</color>
     <color name="panel3">#1f2228</color>
     <color name="accent">#ff4d2e</color>
-    <color name="accent2">#d6283c</color>
+    <color name="accent2">#ff7a55</color>
     <color name="accentStrong">#ff8a66</color>
     <color name="accentSoft">#24ff4d2e</color>
+    <color name="accentPale2">#3dff4d2e</color>
     <color name="accentLine">#73ff4d2e</color>
+    <color name="accentGlow">#61ff4d2e</color>
+    <color name="accentFocus">#26ff4d2e</color>
+    <color name="accentRing">#38ff4d2e</color>
+    <color name="lineSoft">#0dffffff</color>
     <color name="textPrimary">#f2f3f5</color>
     <color name="textSecondary">#a3a6ad</color>
     <color name="textMuted">#6e747c</color>

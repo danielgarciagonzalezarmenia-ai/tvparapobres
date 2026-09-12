@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { api, isServiceDown, itemId, itemName, itemLogo, imgProxy, cleanName, fmtTime, NATIVE_EXTS } from './api.js'
+import { api, isServiceDown, itemId, itemName, itemLogo, imgProxy, cleanName, fmtTime, normName, NATIVE_EXTS } from './api.js'
 import { attachPlayer, playURL, stopPlayback, getPlaybackState, onPlayerEvent } from './player.js'
 import {
   PALETTE, AVATAR_COUNT, newId, loadProfiles, saveProfiles, activeProfileId,
@@ -501,14 +501,14 @@ export default function App() {
   }
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = normName(search.trim())
     let list
     if (showHist) list = hist.filter((h) => h.type !== 'live')
     else if (showFavs) list = favs
     else if (q) list = allItems.length ? allItems : items
     else list = items
     if (!q) return list
-    return list.filter((i) => itemName(i).toLowerCase().includes(q))
+    return list.filter((i) => normName(itemName(i)).includes(q))
   }, [items, favs, hist, allItems, search, showFavs, showHist])
 
   useEffect(() => {

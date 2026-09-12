@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="horizontal"
+    android:paddingHorizontal="15dp"
+    android:paddingVertical="7dp">
+
+    <ImageView
+        android:id="@+id/tabIcon"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
+        android:layout_marginEnd="7dp" />
+
+    <TextView
+        android:id="@+id/tabLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/outfit"
+        android:letterSpacing="0.07"
+        android:textColor="@color/textSecondary"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+</LinearLayout>

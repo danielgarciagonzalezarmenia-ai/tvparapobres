@@ -1,31 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/epRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="5dp"
-    android:background="@drawable/bg_episode"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingHorizontal="14dp"
-    android:paddingVertical="12dp">
+    android:paddingHorizontal="16dp"
+    android:paddingVertical="11dp">
 
     <TextView
-        android:id="@+id/epName"
+        android:id="@+id/epNum"
+        android:layout_width="28dp"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/jetbrains_mono"
+        android:textColor="@color/textMuted"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/epTitle"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:ellipsize="end"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="@font/outfit"
         android:maxLines="1"
         android:textColor="@color/textPrimary"
-        android:textSize="14sp" />
+        android:textSize="13sp" />
 
-    <ImageView
-        android:layout_width="20dp"
-        android:layout_height="20dp"
-        android:layout_marginStart="8dp"
-        android:src="@android:drawable/ic_media_play"
-        android:contentDescription="reproducir"
-        android:tint="@color/accentStrong" />
+    <TextView
+        android:id="@+id/epDur"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:fontFamily="@font/jetbrains_mono"
+        android:textColor="@color/textMuted"
+        android:textSize="11sp"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/epPlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:fontFamily="sans-serif"
+        android:text="▶"
+        android:textColor="@color/accentStrong"
+        android:textSize="13sp" />
 </LinearLayout>

@@ -1,6 +1,10 @@
 package com.tvparapobres.app
 
+import android.animation.ObjectAnimator
 import android.content.pm.ActivityInfo
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -8,7 +12,8 @@ import android.os.PowerManager
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
+import android.view.animation.LinearInterpolator
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -31,12 +36,28 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     private var player: ExoPlayer? = null
     private lateinit var playerView: PlayerView
     private lateinit var streamTitle: TextView
-    private lateinit var epgText: TextView
-    private lateinit var chanInfo: TextView
-    private lateinit var bottomBar: FrameLayout
-    private lateinit var btnPrev: TextView
-    private lateinit var btnNext: TextView
+    private lateinit var chipText: TextView
+    private lateinit var pulseDot: View
+    private lateinit var chposView: TextView
+    private lateinit var epgBar: LinearLayout
+    private lateinit var epgNowRow: LinearLayout
+    private lateinit var epgNowTag: TextView
+    private lateinit var epgNowTitle: TextView
+    private lateinit var epgNowAt: TextView
+    private lateinit var epgNextRow: LinearLayout
+    private lateinit var epgNextTag: TextView
+    private lateinit var epgNextTitle: TextView
+    private lateinit var epgNextAt: TextView
+    private lateinit var epgDiv: View
+    private lateinit var connectOverlay: LinearLayout
+    private lateinit var connectSub: TextView
+    private lateinit var dot1: View
+    private lateinit var dot2: View
+    private lateinit var dot3: View
+    private lateinit var errorOverlay: LinearLayout
+    private lateinit var errorMsg: TextView
     private val uiHandler = Handler(Looper.getMainLooper())
+    private var accent: Int = Color.parseColor("#ff4d2e")
 
     private var histKey: String? = null
     private var startPos: Long = 0
@@ -53,7 +74,6 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     private var lastPosIn = -1L
     private var lastMoveAt = 0L
 
-    private val hideRunnable = Runnable { hideOverlays() }
     private val retryRunnable = Runnable {
         retrying = false
         currentUrl?.let { setMedia(it) }
@@ -87,16 +107,32 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
 
         Profiles.init(applicationContext)
         val pid = intent.getStringExtra("pid") ?: Profiles.sessionId()
+        accent = Profiles.accentArgb(Profiles.detail(pid)?.color)
         HistoryManager.init(applicationContext, pid.ifBlank { "default" })
         FavoritesManager.init(applicationContext, pid.ifBlank { "default" })
 
         playerView = findViewById(R.id.playerView)
         streamTitle = findViewById(R.id.streamTitle)
-        epgText = findViewById(R.id.epgText)
-        chanInfo = findViewById(R.id.chanInfo)
-        bottomBar = findViewById(R.id.bottomBar)
-        btnPrev = findViewById(R.id.btnPrev)
-        btnNext = findViewById(R.id.btnNext)
+        chipText = findViewById(R.id.chipText)
+        pulseDot = findViewById(R.id.pulseDot)
+        chposView = findViewById(R.id.chposView)
+        epgBar = findViewById(R.id.epgBar)
+        epgNowRow = findViewById(R.id.epgNowRow)
+        epgNowTag = findViewById(R.id.epgNowTag)
+        epgNowTitle = findViewById(R.id.epgNowTitle)
+        epgNowAt = findViewById(R.id.epgNowAt)
+        epgNextRow = findViewById(R.id.epgNextRow)
+        epgNextTag = findViewById(R.id.epgNextTag)
+        epgNextTitle = findViewById(R.id.epgNextTitle)
+        epgNextAt = findViewById(R.id.epgNextAt)
+        epgDiv = findViewById(R.id.epgDiv)
+        connectOverlay = findViewById(R.id.connectOverlay)
+        connectSub = findViewById(R.id.connectSub)
+        dot1 = findViewById(R.id.dot1)
+        dot2 = findViewById(R.id.dot2)
+        dot3 = findViewById(R.id.dot3)
+        errorOverlay = findViewById(R.id.errorOverlay)
+        errorMsg = findViewById(R.id.errorMsg)
 
         val url = intent.getStringExtra("url")
         val title = intent.getStringExtra("title")
@@ -111,27 +147,128 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
 
         streamTitle.text = title.orEmpty()
         currentUrl = url
-
-        btnPrev.setOnClickListener { switchChannel(-1) }
-        btnNext.setOnClickListener { switchChannel(1) }
-        if (isTvDevice(this)) {
-            btnPrev.setOnFocusChangeListener { v, has ->
-                v.scaleX = if (has) 1.08f else 1f
-                v.scaleY = if (has) 1.08f else 1f
-            }
-            btnNext.setOnFocusChangeListener { v, has ->
-                v.scaleX = if (has) 1.08f else 1f
-                v.scaleY = if (has) 1.08f else 1f
-            }
-        }
+        applyPlayerTheme()
 
         setupPlayer(url, startPos)
-        showOverlay()
+        showConnecting(null)
 
         if (isLive) {
+            chipText.text = "EN VIVO"
+            chipText.setTextColor(0xFFFF8A91.toInt())
             loadChannels()
             loadEpg(histKey?.removePrefix("live:").orEmpty())
+        } else {
+            chipText.text = "REPRODUCIENDO"
+            chposView.text = ""
         }
+    }
+
+    private fun lighten(c: Int, k: Float): Int {
+        fun m(v: Int) = (v + (255 - v) * k).toInt().coerceIn(0, 255)
+        return Color.rgb(m(Color.red(c)), m(Color.green(c)), m(Color.blue(c)))
+    }
+
+    private fun withAlpha(c: Int, a: Int): Int = (c and 0x00FFFFFF) or ((a and 0xFF) shl 24)
+
+    /** Tiñe el player con el acento del perfil, como el theme de la web. */
+    private fun applyPlayerTheme() {
+        val strong = lighten(accent, 0.4f)
+        for (d in listOf(dot1, dot2, dot3)) d.backgroundTintList = ColorStateList.valueOf(accent)
+        epgNowTag.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(accent)
+            cornerRadius = 20f * resources.displayMetrics.density
+        }
+        epgNextTag.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(withAlpha(accent, 0x24))
+            cornerRadius = 20f * resources.displayMetrics.density
+        }
+        epgNextTag.setTextColor(strong)
+    }
+
+    private val connAnims = mutableListOf<ObjectAnimator>()
+    private var pulseAnim: ObjectAnimator? = null
+
+    private fun startPulse() {
+        pulseAnim?.cancel()
+        pulseAnim = ObjectAnimator.ofFloat(pulseDot, "alpha", 1f, 0.25f).apply {
+            duration = 1100
+            interpolator = LinearInterpolator()
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+            start()
+        }
+        connAnims.add(pulseAnim!!)
+    }
+
+    private fun startDots() {
+        val dots = listOf(dot1 to 0L, dot2 to 140L, dot3 to 280L)
+        for ((v, delay) in dots) {
+            val a = ObjectAnimator.ofFloat(v, "alpha", 0.35f, 1f).apply {
+                duration = 1100
+                interpolator = LinearInterpolator()
+                startDelay = delay
+                repeatCount = ObjectAnimator.INFINITE
+                repeatMode = ObjectAnimator.REVERSE
+                start()
+            }
+            val s = ObjectAnimator.ofFloat(v, "scaleX", 0.7f, 1.15f).apply {
+                duration = 1100
+                interpolator = LinearInterpolator()
+                startDelay = delay
+                repeatCount = ObjectAnimator.INFINITE
+                repeatMode = ObjectAnimator.REVERSE
+                start()
+            }
+            val s2 = ObjectAnimator.ofFloat(v, "scaleY", 0.7f, 1.15f).apply {
+                duration = 1100
+                interpolator = LinearInterpolator()
+                startDelay = delay
+                repeatCount = ObjectAnimator.INFINITE
+                repeatMode = ObjectAnimator.REVERSE
+                start()
+            }
+            connAnims.add(a)
+            connAnims.add(s)
+            connAnims.add(s2)
+        }
+    }
+
+    private fun stopOverlaysAnim() {
+        connAnims.forEach { it.cancel() }
+        connAnims.clear()
+        pulseAnim = null
+        pulseDot.alpha = 1f
+        for (d in listOf(dot1, dot2, dot3)) {
+            d.alpha = 1f
+            d.scaleX = 1f
+            d.scaleY = 1f
+        }
+    }
+
+    private fun showConnecting(sub: String?) {
+        errorOverlay.visibility = View.GONE
+        if (sub != null) connectSub.text = sub
+        if (connectOverlay.visibility != View.VISIBLE) {
+            connectOverlay.visibility = View.VISIBLE
+            startDots()
+        }
+    }
+
+    private fun showError(msg: String) {
+        stopOverlaysAnim()
+        startPulse()
+        connectOverlay.visibility = View.GONE
+        errorMsg.text = msg
+        errorOverlay.visibility = View.VISIBLE
+    }
+
+    private fun hideOverlays() {
+        stopOverlaysAnim()
+        connectOverlay.visibility = View.GONE
+        errorOverlay.visibility = View.GONE
+        startPulse()
     }
 
     private fun setupPlayer(url: String, position: Long) {
@@ -173,7 +310,7 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
             idx = if (myId.isNullOrEmpty()) -1 else channelList.indexOfFirst { it.id == myId }
             if (channelList.isNotEmpty()) {
                 val shown = if (idx >= 0) idx + 1 else 0
-                chanInfo.text = if (shown > 0) "$shown / ${channelList.size}" else "1 / ${channelList.size}"
+                chposView.text = if (shown > 0) "$shown / ${channelList.size}" else "1 / ${channelList.size}"
             }
             liveLoading = false
         }
@@ -192,31 +329,32 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     }
 
     private fun renderEpg(lines: List<Xtream.EpgLine>) {
-        if (lines.isEmpty()) {
-            epgText.visibility = View.GONE
-            return
-        }
         val now = System.currentTimeMillis() / 1000
         val cur = lines.firstOrNull { it.start <= now && now < it.end }
         val next = lines.firstOrNull { it.start > now }
-        val sb = StringBuilder()
+        if (cur == null && next == null) {
+            epgBar.visibility = View.GONE
+            return
+        }
+        epgBar.visibility = View.VISIBLE
         if (cur != null) {
-            sb.append("AHORA: ").append(cur.title)
+            epgNowRow.visibility = View.VISIBLE
+            epgNowTitle.text = NameCleaner.clean(cur.title).ifBlank { "Sin título" }
+            epgNowAt.text = "${fmtHour(cur.start)} – ${fmtHour(cur.end)}"
+        } else {
+            epgNowRow.visibility = View.GONE
         }
         if (next != null) {
-            if (sb.isNotEmpty()) sb.append("\n")
-            sb.append("DESPUÉS: ").append(next.title)
-                .append("  ").append(fmtTime(next.start))
-        }
-        if (sb.isEmpty()) {
-            epgText.text = "Sin EPG para este canal"
+            epgNextRow.visibility = View.VISIBLE
+            epgNextTitle.text = NameCleaner.clean(next.title).ifBlank { "Sin título" }
+            epgNextAt.text = fmtHour(next.start)
         } else {
-            epgText.text = sb.toString()
+            epgNextRow.visibility = View.GONE
         }
-        epgText.visibility = View.VISIBLE
+        epgDiv.visibility = if (cur != null && next != null) View.VISIBLE else View.GONE
     }
 
-    private fun fmtTime(epochSec: Long): String =
+    private fun fmtHour(epochSec: Long): String =
         try {
             java.text.SimpleDateFormat("HH:mm", java.util.Locale.US).format(java.util.Date(epochSec * 1000))
         } catch (_: Exception) {
@@ -224,13 +362,9 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         }
 
     private fun switchChannel(delta: Int) {
-        if (!isLive) {
-            showOverlay()
-            return
-        }
+        if (!isLive) return
         if (channelList.isEmpty()) {
-            chanInfo.text = "Cargando canales…"
-            showOverlay()
+            showConnecting("CARGANDO CANALES…")
             loadChannels()
             return
         }
@@ -244,7 +378,7 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         currentUrl = url
         histKey = key
         streamTitle.text = s.name
-        chanInfo.text = "${idx + 1} / ${channelList.size}"
+        chposView.text = "${idx + 1} / ${channelList.size}"
         HistoryManager.save(
             JSONObject().apply {
                 put("key", key)
@@ -262,21 +396,20 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         retries = 0
         setMedia(url)
         renderEpg(emptyList())
+        epgBar.visibility = View.GONE
         loadEpg(s.id)
-        showOverlay()
+        showConnecting(null)
     }
 
     override fun onPlayerError(error: PlaybackException) {
         retrying = false
         retries++
         if (retries > 60) {
-            chanInfo.text = "Sin señal. Usa los botones o cambia de canal para reintentar."
-            showOverlay()
+            showError("Sin señal. Cambia de canal para reintentar.")
             return
         }
         val delay = if (retries <= 8) 3000L * retries else 30000L
-        chanInfo.text = "Reintentando… ($retries)"
-        showOverlay()
+        showError("Reintentando… ($retries)")
         uiHandler.removeCallbacks(retryRunnable)
         uiHandler.postDelayed(retryRunnable, delay.coerceAtMost(30000))
     }
@@ -284,10 +417,7 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     override fun onPlaybackStateChanged(playbackState: Int) {
         if (playbackState == Player.STATE_READY) {
             retries = 0
-            if (chanInfo.text.startsWith("Reintentando") || chanInfo.text.startsWith("Sin señal")) {
-                chanInfo.text = if (isLive && idx >= 0) "${idx + 1} / ${channelList.size}" else ""
-            }
-            showOverlay()
+            hideOverlays()
         }
     }
 
@@ -306,15 +436,13 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
         val state = p.playbackState
         if (state == Player.STATE_BUFFERING || state == Player.STATE_IDLE) {
             if (p.isLoading && now - lastMoveAt > 20000 && isLive) {
-                chanInfo.text = "Señal lenta, reintentando…"
-                showOverlay()
+                showError("Señal lenta, reintentando…")
                 forceRetry()
             }
         } else if (p.isPlaying) {
             if (pos == lastPosIn) {
                 if (now - lastMoveAt > 10000 && isLive) {
-                    chanInfo.text = "Señal congelada, reintentando…"
-                    showOverlay()
+                    showError("Señal congelada, reintentando…")
                     forceRetry()
                 }
             } else {
@@ -327,32 +455,18 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     private fun forceRetry() {
         if (retrying) return
         retrying = true
-        chanInfo.text = "Reintentando…"
-        showOverlay()
+        showError("Reintentando…")
         uiHandler.removeCallbacks(retryRunnable)
         uiHandler.postDelayed(retryRunnable, 1500)
     }
 
-    private fun showOverlay() {
-        bottomBar.visibility = View.VISIBLE
-        streamTitle.visibility = View.VISIBLE
-        if (!epgText.text.isNullOrBlank()) epgText.visibility = View.VISIBLE
-        uiHandler.removeCallbacks(hideRunnable)
-        uiHandler.postDelayed(hideRunnable, 6000)
-    }
-
-    private fun hideOverlays() {
-        bottomBar.visibility = View.GONE
-        streamTitle.animate().alpha(0f).setDuration(300).withEndAction { streamTitle.visibility = View.GONE }.start()
-        epgText.visibility = View.GONE
-    }
-
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         return when (keyCode) {
-            KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP -> {
+            // Cambio de canal invisible (sin botones en pantalla): CH, Page y flechas.
+            KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_DPAD_UP -> {
                 switchChannel(1); true
             }
-            KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN -> {
+            KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_DPAD_DOWN -> {
                 switchChannel(-1); true
             }
             else -> super.onKeyDown(keyCode, event)
@@ -361,17 +475,18 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
 
     override fun onStart() {
         super.onStart()
+        startPulse()
         uiHandler.postDelayed(stallRunnable, 5000)
     }
 
     override fun onStop() {
         uiHandler.removeCallbacks(stallRunnable)
+        stopOverlaysAnim()
         super.onStop()
     }
 
     override fun onPause() {
         super.onPause()
-        uiHandler.removeCallbacks(hideRunnable)
         uiHandler.removeCallbacks(retryRunnable)
         savePos()
         player?.playWhenReady = false
@@ -384,7 +499,6 @@ class PlayerActivity : AppCompatActivity(), Player.Listener {
     }
 
     override fun onDestroy() {
-        uiHandler.removeCallbacks(hideRunnable)
         uiHandler.removeCallbacks(retryRunnable)
         uiHandler.removeCallbacks(stallRunnable)
         savePos()

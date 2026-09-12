@@ -3,18 +3,29 @@ package com.tvparapobres.app
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextWatcher
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.TypefaceSpan
 import android.view.View
+import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -31,20 +42,31 @@ class MainActivity : AppCompatActivity() {
         private const val PAGE = 240
         private const val REQ_PICKER = 11
         private const val REQ_CREATE = 12
-        private const val TAB_FAV = 3
-        private const val TAB_HIST = 4
     }
 
     private lateinit var grid: RecyclerView
+    private lateinit var skelGrid: RecyclerView
+    private lateinit var emptyView: TextView
     private lateinit var catRow: LinearLayout
     private lateinit var catScroller: View
-    private lateinit var loading: ProgressBar
     private lateinit var tabs: TabLayout
     private lateinit var searchBox: EditText
-    private lateinit var btnProfile: TextView
+    private lateinit var btnProfile: FrameLayout
+    private lateinit var proAvatar: AvatarView
+    private lateinit var btnFav: TextView
+    private lateinit var btnHist: TextView
+    private lateinit var gridTitle: TextView
+    private lateinit var gridCount: TextView
+    private lateinit var servLock: LinearLayout
+    private lateinit var servTitle: TextView
+    private lateinit var servSub: TextView
+    private lateinit var servHint: TextView
     private lateinit var streamAdapter: StreamAdapter
 
     private var currentTab = 0
+    private var showFavs = false
+    private var showHist = false
+    private var activeCat: Cat? = null
     private var cats = emptyList<Cat>()
     private val catButtons = mutableListOf<MaterialButton>()
     private var allItems = emptyList<Strm>()
@@ -65,16 +87,41 @@ class MainActivity : AppCompatActivity() {
         grid = findViewById(R.id.grid)
         catRow = findViewById(R.id.catRow)
         catScroller = findViewById(R.id.catScroller)
-        loading = findViewById(R.id.loading)
+        skelGrid = findViewById(R.id.skelGrid)
+        emptyView = findViewById(R.id.emptyView)
         tabs = findViewById(R.id.tabLayout)
         searchBox = findViewById(R.id.searchBox)
         btnProfile = findViewById(R.id.btnProfile)
+        proAvatar = findViewById(R.id.proAvatar)
+        btnFav = findViewById(R.id.btnFav)
+        btnHist = findViewById(R.id.btnHist)
+        gridTitle = findViewById(R.id.gridTitle)
+        gridCount = findViewById(R.id.gridCount)
+        servLock = findViewById(R.id.servLock)
+        servTitle = findViewById(R.id.servTitle)
+        servSub = findViewById(R.id.servSub)
+        servHint = findViewById(R.id.servHint)
+        setupTabs()
 
         findViewById<View>(R.id.btnDonate).setOnClickListener {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://tvparapobres.tipsterpage.com/kttCMjB2")))
         }
         btnProfile.setOnClickListener {
             startActivityForResult(Intent(this, ProfilePickerActivity::class.java), REQ_PICKER)
+        }
+        btnFav.setOnClickListener {
+            showFavs = !showFavs
+            if (showFavs) showHist = false
+            updateHeadButtons()
+            reload()
+            if (searchBox.text.isNotEmpty()) filterSearch(searchBox.text.toString())
+        }
+        btnHist.setOnClickListener {
+            showHist = !showHist
+            if (showHist) showFavs = false
+            updateHeadButtons()
+            reload()
+            if (searchBox.text.isNotEmpty()) filterSearch(searchBox.text.toString())
         }
 
         val cols = when {
@@ -91,8 +138,11 @@ class MainActivity : AppCompatActivity() {
                 if (streamAdapter.getItemViewType(position) == StreamAdapter.TYPE_MORE) cols else 1
         }
         grid.layoutManager = glm
-        streamAdapter = StreamAdapter(accent, tvMode, ::openItem, ::toggleFav, ::loadMore)
+        streamAdapter = StreamAdapter(accent, tvMode, ::openItem, ::toggleFav, ::loadMore, ::removeHist)
         grid.adapter = streamAdapter
+        skelGrid.layoutManager = GridLayoutManager(this, cols)
+        skelGrid.adapter = SkelAdapter()
+        skelGrid.setHasFixedSize(true)
 
         grid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
@@ -108,8 +158,12 @@ class MainActivity : AppCompatActivity() {
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 currentTab = tab.position
-                searchBox.text.clear()
+                showFavs = false
+                showHist = false
+                styleTabs()
+                updateHeadButtons()
                 reload()
+                if (searchBox.text.isNotEmpty()) searchBox.text.clear()
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
@@ -124,6 +178,65 @@ class MainActivity : AppCompatActivity() {
         })
 
         ensureProfile()
+        checkService()
+        lockHandler.postDelayed(lockCheck, 15000)
+    }
+
+    override fun onDestroy() {
+        lockHandler.removeCallbacks(lockCheck)
+        super.onDestroy()
+    }
+
+    /* ----- Bloqueos de servicio/vencimiento, como la web ----- */
+    private val lockHandler = Handler(Looper.getMainLooper())
+    private val lockCheck = object : Runnable {
+        override fun run() {
+            checkService()
+            lockHandler.postDelayed(this, 15000)
+        }
+    }
+
+    private fun checkService() {
+        lifecycleScope.launch {
+            val info = try {
+                withContext(Dispatchers.IO) { Xtream.userInfo() }
+            } catch (_: Exception) {
+                null
+            }
+            if (info == null) {
+                showLock("down")
+                return@launch
+            }
+            val exp = Xtream.expDate(info)
+            if (exp > 0) {
+                val fmt = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                val today = fmt.format(java.util.Date())
+                val expStr = fmt.format(java.util.Date(exp * 1000))
+                if (today >= expStr) {
+                    showLock("expired")
+                    return@launch
+                }
+            }
+            hideLock()
+        }
+    }
+
+    private fun showLock(mode: String) {
+        if (mode == "expired") {
+            servTitle.text = "Actualizando servidores"
+            servSub.text = "Estamos actualizando los servidores para seguir disfrutando de contenido gratis. Gracias por tu paciencia."
+            servHint.visibility = View.GONE
+        } else {
+            servTitle.text = "Sin servicio por el momento"
+            servSub.text = "Nuestro equipo está realizando mantenimiento. El contenido volverá a estar disponible en unos minutos. ¡Gracias por tu paciencia!"
+            servHint.text = "Reintentando automáticamente en unos segundos..."
+            servHint.visibility = View.VISIBLE
+        }
+        servLock.visibility = View.VISIBLE
+    }
+
+    private fun hideLock() {
+        servLock.visibility = View.GONE
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -131,6 +244,109 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus && tvMode && currentTab == 0 && streamAdapter.itemCount > 0) {
             grid.post { grid.requestFocus() }
         }
+    }
+
+    /* ----- Acento dinámico (igual que --accent* de la web) ----- */
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+    private fun withAlpha(c: Int, a: Int): Int = (c and 0x00FFFFFF) or ((a and 0xFF) shl 24)
+    private fun lighten(c: Int, k: Float): Int {
+        fun m(v: Int) = (v + (255 - v) * k).toInt().coerceIn(0, 255)
+        return Color.rgb(m(Color.red(c)), m(Color.green(c)), m(Color.blue(c)))
+    }
+    private fun accentStrong(): Int = lighten(accent, 0.4f)
+    private fun accent2(): Int = lighten(accent, 0.55f)
+
+    private fun tabActiveBg(): GradientDrawable =
+        GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(accent, accent2())).apply {
+            cornerRadius = dp(9).toFloat()
+        }
+
+    private fun headActiveBg(): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        setColor(withAlpha(accent, 0x24))
+        setStroke(dp(1), withAlpha(accent, 0x73))
+        cornerRadius = dp(12).toFloat()
+    }
+
+    private fun countBg(): GradientDrawable = GradientDrawable().apply {
+        shape = GradientDrawable.RECTANGLE
+        setColor(withAlpha(accent, 0x24))
+        setStroke(dp(1), withAlpha(accent, 0x38))
+        cornerRadius = dp(20).toFloat()
+    }
+
+    private fun dashBg(): GradientDrawable = GradientDrawable(
+        GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(accent, Color.TRANSPARENT)
+    ).apply { cornerRadius = dp(2).toFloat() }
+
+    private fun donateBg(): GradientDrawable =
+        GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(accent, accent2())).apply {
+            cornerRadius = dp(12).toFloat()
+        }
+
+    /* ----- Tabs estilo web (pills con icono) ----- */
+    private val TAB_TITLES = listOf("LIVE", "PELÍCULAS", "SERIES")
+    private val TAB_ICONS = listOf(R.drawable.ic_tab_live, R.drawable.ic_tab_film, R.drawable.ic_tab_series)
+
+    private fun setupTabs() {
+        tabs.removeAllTabs()
+        TAB_TITLES.forEachIndexed { i, t ->
+            val tab = tabs.newTab()
+            val v = layoutInflater.inflate(R.layout.tab_pill, tabs, false)
+            v.findViewById<TextView>(R.id.tabLabel).text = t
+            v.findViewById<ImageView>(R.id.tabIcon).setImageResource(TAB_ICONS[i])
+            tab.customView = v
+            tabs.addTab(tab)
+        }
+        styleTabs()
+    }
+
+    private fun styleTabs() {
+        val sel = tabs.selectedTabPosition
+        for (i in 0 until tabs.tabCount) {
+            val v = tabs.getTabAt(i)?.customView ?: continue
+            val on = i == sel
+            val label = v.findViewById<TextView>(R.id.tabLabel)
+            val icon = v.findViewById<ImageView>(R.id.tabIcon)
+            v.background = if (on) tabActiveBg() else null
+            label.setTextColor(if (on) Color.WHITE else 0xFFA3A6AD.toInt())
+            icon.setColorFilter(if (on) Color.WHITE else 0xFFA3A6AD.toInt())
+        }
+    }
+
+    /* ----- Botones ★/reloj con contador + título/contador del grid (como la web) ----- */
+    private fun updateHeadButtons() {
+        val strong = accentStrong()
+        val muted = 0xFFA3A6AD.toInt()
+        val fc = streamAdapter.favCount()
+        val fss = SpannableString("★ $fc")
+        fss.setSpan(ForegroundColorSpan(if (showFavs) strong else Color.WHITE), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        fss.setSpan(ForegroundColorSpan(if (showFavs) strong else muted), 2, fss.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        fss.setSpan(TypefaceSpan("monospace"), 2, fss.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        fss.setSpan(AbsoluteSizeSpan(11, true), 2, fss.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        btnFav.text = fss
+        btnFav.background = if (showFavs) headActiveBg() else ContextCompat.getDrawable(this, R.drawable.bg_headbtn)
+        val hc = try { HistoryManager.loadAll().size } catch (_: Exception) { 0 }
+        btnHist.text = "$hc"
+        btnHist.setTextColor(if (showHist) strong else muted)
+        btnHist.compoundDrawableTintList = ColorStateList.valueOf(if (showHist) strong else Color.WHITE)
+        btnHist.background = if (showHist) headActiveBg() else ContextCompat.getDrawable(this, R.drawable.bg_headbtn)
+        findViewById<View>(R.id.btnDonate).background = donateBg()
+    }
+
+    private fun currentTitle(): String = when {
+        showHist -> "Historial"
+        showFavs -> "Favoritos"
+        currentTab == 0 -> "Canales"
+        else -> cleanName(activeCat?.name ?: "...")
+    }
+
+    private fun updateHead(title: String, total: Int) {
+        gridTitle.text = title
+        gridCount.text = "$total"
+        gridCount.setTextColor(accentStrong())
+        gridCount.background = countBg()
+        findViewById<View>(R.id.gridDash).background = dashBg()
     }
 
     private fun ensureProfile() {
@@ -170,18 +386,15 @@ class MainActivity : AppCompatActivity() {
         streamAdapter.accent = accent
 
         val p = Profiles.detail(pid)
-        btnProfile.text = p?.name?.firstOrNull()?.uppercase() ?: "?"
-        val avatarBg = android.graphics.drawable.GradientDrawable()
-        avatarBg.shape = android.graphics.drawable.GradientDrawable.OVAL
-        avatarBg.setColor(accent)
-        btnProfile.background = avatarBg
-        btnProfile.setTextColor(Color.WHITE)
+        proAvatar.set(p?.photo, accent, p?.avatar ?: 0)
 
         tabs.setSelectedTabIndicatorColor(accent)
         tabs.setTabTextColors(Color.parseColor("#a3a6ad"), accent)
-        loading.indeterminateTintList = ColorStateList.valueOf(accent)
 
         streamAdapter.setFavs(favsAsStreams())
+        styleTabs()
+        updateHeadButtons()
+        updateHead(currentTitle(), allItems.size)
         reload()
     }
 
@@ -203,20 +416,24 @@ class MainActivity : AppCompatActivity() {
         val nq = norm(q)
         if (nq.isEmpty()) {
             searching = false
-            if (currentTab == 0) {
+            if (!showFavs && !showHist && currentTab == 0) {
                 visibleLive = 0
                 loadingMore = false
                 showLivePage(initial = true)
             } else {
                 streamAdapter.submit(allItems)
                 streamAdapter.setHasMore(false)
+                if (allItems.isEmpty()) showEmpty("Sin resultados.") else hideEmpty()
             }
+            updateHead(currentTitle(), allItems.size)
             return
         }
         searching = true
         val filtered = allItems.filter { normCached(it.name).contains(nq) }
         streamAdapter.submit(filtered)
         streamAdapter.setHasMore(false)
+        if (filtered.isEmpty()) showEmpty("Sin resultados.") else hideEmpty()
+        updateHead(currentTitle(), filtered.size)
         grid.scrollToPosition(0)
     }
 
@@ -243,18 +460,41 @@ class MainActivity : AppCompatActivity() {
         searching = false
         visibleLive = 0
         loadingMore = false
+        streamAdapter.histMode = showHist
         streamAdapter.setHasMore(false)
-        when (currentTab) {
-            0 -> loadLive()
-            1, 2 -> loadCats()
-            TAB_FAV -> loadFavs()
-            TAB_HIST -> loadHistory()
+        when {
+            showHist -> loadHistory()
+            showFavs -> loadFavs()
+            currentTab == 0 -> loadLive()
+            else -> loadCats()
         }
     }
 
+    private var busy = false
+
     private fun setBusy(b: Boolean) {
-        loading.visibility = if (b) View.VISIBLE else View.GONE
+        busy = b
+        skelGrid.visibility = if (b) View.VISIBLE else View.GONE
+        emptyView.visibility = View.GONE
         grid.visibility = if (b) View.GONE else View.VISIBLE
+    }
+
+    private fun showEmpty(msg: String) {
+        emptyView.text = msg
+        emptyView.visibility = View.VISIBLE
+        grid.visibility = View.GONE
+    }
+
+    private fun hideEmpty() {
+        emptyView.visibility = View.GONE
+        if (!busy) grid.visibility = View.VISIBLE
+    }
+
+    private fun animateGrid() {
+        grid.layoutAnimation =
+            AnimationUtils.loadLayoutAnimation(this, R.anim.grid_layout_animation)
+        grid.scheduleLayoutAnimation()
+        grid.postDelayed({ grid.layoutAnimation = null }, 900)
     }
 
     private fun loadLive() {
@@ -273,30 +513,40 @@ class MainActivity : AppCompatActivity() {
                 emptyList<Strm>()
             }
             if (list.isEmpty()) {
-                Toast.makeText(this@MainActivity, "Sin respuesta del proveedor", Toast.LENGTH_LONG).show()
                 setBusy(false)
+                showEmpty("Sin resultados.")
                 return@launch
             }
             allItems = list
             streamAdapter.setFavs(favsAsStreams())
-            showLivePage(initial = true)
+            updateHeadButtons()
+            updateHead("Canales", allItems.size)
+            if (searchBox.text.isNotEmpty()) filterSearch(searchBox.text.toString())
+            else showLivePage(initial = true)
             setBusy(false)
         }
     }
 
     private fun showLivePage(initial: Boolean) {
         val all = allItems
+        if (all.isEmpty()) {
+            showEmpty("Sin resultados.")
+            return
+        }
+        hideEmpty()
         val target = minOf(visibleLive + PAGE, all.size)
         val chunk = all.subList(visibleLive, target)
         if (initial) {
             visibleLive = 0
             streamAdapter.submit(all.subList(0, minOf(PAGE, all.size)))
             visibleLive = all.subList(0, minOf(PAGE, all.size)).size
+            animateGrid()
         } else {
             streamAdapter.append(chunk)
             visibleLive = target
         }
         streamAdapter.setHasMore(visibleLive < all.size)
+        if (visibleLive < all.size) streamAdapter.setMoreLabel(all.size - visibleLive)
     }
 
     private fun loadMore() {
@@ -322,8 +572,8 @@ class MainActivity : AppCompatActivity() {
                 emptyList<Cat>()
             }
             if (res.isEmpty()) {
-                Toast.makeText(this@MainActivity, "Sin respuesta del proveedor", Toast.LENGTH_LONG).show()
                 setBusy(false)
+                showEmpty("Sin resultados.")
                 return@launch
             }
             cats = res
@@ -340,19 +590,27 @@ class MainActivity : AppCompatActivity() {
         streamAdapter.setFavs(allItems)
         streamAdapter.submit(allItems)
         streamAdapter.setHasMore(false)
+        updateHead("Favoritos", allItems.size)
         setBusy(false)
-        if (allItems.isEmpty()) Toast.makeText(this, "Sin favoritos todavía", Toast.LENGTH_SHORT).show()
+        if (allItems.isEmpty()) {
+            showEmpty("Aún no tienes favoritos. Toca ★ en un canal para guardarlo.")
+        } else {
+            hideEmpty()
+            animateGrid()
+        }
     }
 
     private fun loadHistory() {
         catScroller.visibility = View.GONE
         setBusy(false)
         catRow.removeAllViews()
-        val entries = HistoryManager.loadAll()
+        // Como la web: el historial no lista canales en vivo.
+        val entries = HistoryManager.loadAll().filter { it.optString("type") != "live" }
         if (entries.isEmpty()) {
             streamAdapter.submit(emptyList())
             streamAdapter.setHasMore(false)
-            Toast.makeText(this, "Sin historial", Toast.LENGTH_SHORT).show()
+            updateHead("Historial", 0)
+            showEmpty("Aún no hay nada en tu historial.")
             return
         }
         val items = entries.map { e ->
@@ -361,7 +619,10 @@ class MainActivity : AppCompatActivity() {
                 name = e.optString("name", "Sin título"),
                 icon = e.optString("logo", ""),
                 ext = e.optString("ext", ""),
-                type = e.optString("type", "vod")
+                type = e.optString("type", "vod"),
+                pos = e.optLong("position", 0),
+                dur = e.optLong("duration", 0),
+                hkey = e.optString("key", "")
             )
         }
         allItems = items
@@ -369,6 +630,16 @@ class MainActivity : AppCompatActivity() {
         streamAdapter.setFavs(favsAsStreams())
         streamAdapter.submit(items)
         streamAdapter.setHasMore(false)
+        hideEmpty()
+        animateGrid()
+        updateHead("Historial", items.size)
+    }
+
+    private fun removeHist(key: String) {
+        if (key.isEmpty()) return
+        HistoryManager.remove(key)
+        updateHeadButtons()
+        if (showHist) reload()
     }
 
     private fun paintCats() {
@@ -415,6 +686,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun selectCat(cat: Cat) {
+        activeCat = cat
         styleCats(cat)
         setBusy(true)
         lifecycleScope.launch {
@@ -430,6 +702,14 @@ class MainActivity : AppCompatActivity() {
             streamAdapter.setFavs(favsAsStreams())
             streamAdapter.submit(list)
             streamAdapter.setHasMore(false)
+            updateHead(cleanName(cat.name), list.size)
+            if (list.isEmpty()) {
+                showEmpty("Sin resultados.")
+            } else {
+                hideEmpty()
+                animateGrid()
+            }
+            if (searchBox.text.isNotEmpty()) filterSearch(searchBox.text.toString())
             setBusy(false)
         }
     }
@@ -446,15 +726,16 @@ class MainActivity : AppCompatActivity() {
         val (_, added) = FavoritesManager.toggle(item)
         streamAdapter.applyFav(s, added)
         Toast.makeText(this, if (added) "Guardado en favoritos" else "Quitado de favoritos", Toast.LENGTH_SHORT).show()
-        if (currentTab == TAB_FAV) reload()
+        updateHeadButtons()
+        if (showFavs) reload()
     }
 
     private fun openItem(s: Strm) {
-        if (currentTab == TAB_HIST) {
+        if (showHist) {
             openFromHistory(s)
             return
         }
-        if (currentTab == TAB_FAV && s.type == "series") {
+        if (showFavs && s.type == "series") {
             val i = Intent(this, SeriesActivity::class.java)
             i.putExtra("seriesId", s.id)
             i.putExtra("seriesName", s.name)

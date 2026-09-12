@@ -33,6 +33,12 @@ object Accounts {
         return Cred(parts[0], parts[1])
     }
 
+    /** Cuenta estable para chequear servicio/vencimiento (no rota). */
+    fun stable(): Cred {
+        val parts = list[0].split("|")
+        return Cred(parts[0], parts[1])
+    }
+
     fun liveUrl(id: String): String {
         val c = next()
         return "$SERVER/${c.user}/${c.pass}/$id"

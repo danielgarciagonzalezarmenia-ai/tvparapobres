@@ -19,14 +19,32 @@ data class Strm(
     val name: String,
     val icon: String,
     val ext: String = "",
-    val type: String = "live" // live | vod | series
+    val type: String = "live", // live | vod | series
+    val pos: Long = 0, // historial: posición ms
+    val dur: Long = 0, // historial: duración ms
+    val hkey: String = "" // historial: clave para borrar
 )
 
 data class Episode(
     val id: String,
     val num: String,
     val title: String,
-    val ext: String
+    val ext: String,
+    val dur: String = ""
+)
+
+data class Season(val id: String, val eps: List<Episode>)
+
+data class SeriesFull(
+    val cover: String,
+    val name: String,
+    val year: String,
+    val rating: String,
+    val genre: String,
+    val plot: String,
+    val cast: String,
+    val seasonNames: Map<String, String>,
+    val seasons: List<Season>
 )
 
 object Xtream {
@@ -37,9 +55,9 @@ object Xtream {
 
     private val ADULT = Regex("(?i)(adulto?s?|hentai|porn(?:o|ografia)?|x{3,}|erotic|18\\+|\\+18)")
 
-    private suspend fun api(action: String, extra: Map<String, Any> = emptyMap()): JSONObject? =
+    private suspend fun api(action: String, extra: Map<String, Any> = emptyMap(), stable: Boolean = false): JSONObject? =
         withContext(Dispatchers.IO) {
-            val c = Accounts.next()
+            val c = if (stable) Accounts.stable() else Accounts.next()
             val sb = StringBuilder("${Accounts.SERVER}/player_api.php?username=${c.user}&password=${c.pass}")
             if (action.isNotEmpty()) sb.append("&action=").append(action)
             for ((k, v) in extra) sb.append("&").append(k).append("=").append(v)
@@ -80,6 +98,12 @@ object Xtream {
                 type = type
             )
         }
+
+    /** user_info con cuenta estable + fecha de vencimiento (epoch seg), como api.meta() de la web. */
+    suspend fun userInfo(): JSONObject? = api("", stable = true)
+
+    fun expDate(info: JSONObject?): Long =
+        info?.optJSONObject("user_info")?.optString("exp_date")?.toLongOrNull() ?: -1
 
     suspend fun liveCategories(): List<Cat> = api("get_live_categories")?.cats() ?: emptyList()
     suspend fun liveStreams(catId: String): List<Strm> =
@@ -158,26 +182,51 @@ object Xtream {
         api("get_series", mapOf("category_id" to catId))?.streams("series") ?: emptyList()
 
     suspend fun seriesInfo(seriesId: String): List<Episode> =
+        seriesFull(seriesId)?.seasons?.flatMap { it.eps } ?: emptyList()
+
+    /** Ficha completa de serie como el modal web: portada, meta, temporadas y episodios. */
+    suspend fun seriesFull(seriesId: String): SeriesFull? =
         api("get_series_info", mapOf("series_id" to seriesId))?.let { obj ->
-            obj.optJSONObject("episodes")?.let { epsObj ->
-                val out = mutableListOf<Episode>()
-                val keys = epsObj.keys()
-                while (keys.hasNext()) {
-                    val season = keys.next()
-                    val arr = epsObj.optJSONArray(season) ?: continue
-                    for (i in 0 until arr.length()) {
-                        val ep = arr.getJSONObject(i)
-                        out.add(
-                            Episode(
-                                id = ep.optString("id"),
-                                num = ep.optString("episode_num"),
-                                title = ep.optString("title"),
-                                ext = ep.optString("container_extension", "mp4")
-                            )
-                        )
-                    }
+            val info = obj.optJSONObject("info") ?: JSONObject()
+            val seasonNames = mutableMapOf<String, String>()
+            obj.optJSONArray("seasons")?.let { arr ->
+                for (i in 0 until arr.length()) {
+                    val s = arr.optJSONObject(i) ?: continue
+                    seasonNames[s.optString("season_number")] = s.optString("name")
                 }
-                out
-            } ?: emptyList()
-        } ?: emptyList()
+            }
+            val seasons = mutableListOf<Season>()
+            obj.optJSONObject("episodes")?.let { epsObj ->
+                val keys = epsObj.keys()
+                val sk = mutableListOf<String>()
+                while (keys.hasNext()) sk.add(keys.next())
+                sk.sortedWith(compareBy<String> { it.toIntOrNull() ?: Int.MAX_VALUE }.thenBy { it })
+                    .forEach { season ->
+                        val arr = epsObj.optJSONArray(season) ?: return@forEach
+                        val eps = (0 until arr.length()).mapNotNull { i ->
+                            val ep = arr.optJSONObject(i) ?: return@mapNotNull null
+                            Episode(
+                                ep.optString("id"),
+                                ep.optString("episode_num"),
+                                ep.optString("title"),
+                                ep.optString("container_extension", "mp4"),
+                                ep.optJSONObject("info")?.optString("duration").orEmpty()
+                            )
+                        }.sortedWith(compareBy<Episode> { it.num.toIntOrNull() ?: Int.MAX_VALUE }.thenBy { it.title })
+                        if (eps.isNotEmpty()) seasons.add(Season(season, eps))
+                    }
+            }
+            SeriesFull(
+                cover = info.optString("cover")
+                    .ifEmpty { info.optString("movie_image").ifEmpty { info.optString("backdrop_path") } },
+                name = info.optString("name"),
+                year = info.optString("releaseDate").ifEmpty { info.optString("year") },
+                rating = info.optString("rating").ifEmpty { info.optString("rating_5based") },
+                genre = info.optString("genre"),
+                plot = info.optString("plot"),
+                cast = info.optString("cast"),
+                seasonNames = seasonNames,
+                seasons = seasons
+            )
+        }
 }

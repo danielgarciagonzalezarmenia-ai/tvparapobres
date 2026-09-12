@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="7dp"
+    app:cardBackgroundColor="@color/panel"
+    app:cardCornerRadius="14dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/lineSoft"
+    app:strokeWidth="1dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="110dp"
+                android:background="@drawable/bg_skel_top" />
+
+            <View
+                android:layout_width="120dp"
+                android:layout_height="10dp"
+                android:layout_marginLeft="11dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_skel_line" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/skelHi"
+            android:layout_width="70dp"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_skel_hi" />
+    </FrameLayout>
+</com.google.android.material.card.MaterialCardView>

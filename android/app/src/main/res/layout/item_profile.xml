@@ -21,61 +21,75 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
             android:padding="12dp">
 
-            <TextView
+            <com.tvparapobres.app.AvatarView
                 android:id="@+id/profileAvatar"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="8dp"
-                android:fontFamily="sans-serif-black"
-                android:gravity="center"
-                android:textColor="#ffffff"
-                android:textSize="26sp" />
+                android:layout_width="78dp"
+                android:layout_height="78dp"
+                android:layout_marginTop="8dp" />
 
             <TextView
                 android:id="@+id/profileName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="11dp"
                 android:ellipsize="end"
-                android:fontFamily="sans-serif-black"
+                android:fontFamily="@font/outfit"
                 android:gravity="center"
                 android:maxLines="1"
                 android:textColor="@color/textPrimary"
-                android:textSize="15sp" />
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/profileLock"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="6dp"
-                android:background="@drawable/bg_donate"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="3dp"
-                android:text="🔒 PIN"
-                android:textColor="#ffffff"
-                android:textSize="10sp"
+                android:background="@drawable/bg_pinbadge"
+                android:fontFamily="@font/jetbrains_mono"
+                android:letterSpacing="0.1"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="2dp"
+                android:text="PIN"
+                android:textAllCaps="true"
+                android:textColor="@color/accentStrong"
+                android:textSize="9sp"
+                android:textStyle="bold"
                 android:visibility="gone" />
         </LinearLayout>
 
         <TextView
             android:id="@+id/profileDelete"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_gravity="top|end"
-            android:layout_margin="4dp"
-            android:background="@drawable/bg_donate"
-            android:fontFamily="sans-serif-medium"
-            android:gravity="center"
-            android:text="✕"
-            android:textColor="#ffffff"
-            android:textSize="14sp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="top|start"
+            android:layout_margin="8dp"
+            android:background="@drawable/bg_pickedit"
+            android:fontFamily="sans-serif"
             android:focusable="true"
             android:focusableInTouchMode="true"
+            android:gravity="center"
+            android:text="✕"
+            android:textColor="@color/textMuted"
+            android:textSize="11sp"
             android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/profileEdit"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="8dp"
+            android:alpha="0.6"
+            android:background="@drawable/bg_pickedit"
+            android:focusable="true"
+            android:focusableInTouchMode="true"
+            android:padding="6dp"
+            android:src="@drawable/ic_pencil"
+            android:tint="@color/textMuted" />
     </FrameLayout>
 </com.google.android.material.card.MaterialCardView>

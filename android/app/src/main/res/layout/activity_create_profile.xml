@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/black"
@@ -9,124 +8,217 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="6dp">
+            android:maxWidth="420dp"
+            android:background="@drawable/bg_form_panel"
+            android:orientation="vertical"
+            android:padding="22dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnBack"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_ghostbtn"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:fontFamily="@font/outfit"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="10dp"
+                    android:text="‹ Volver"
+                    android:textColor="@color/textSecondary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/formTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/outfit"
+                    android:text="NUEVO PERFIL"
+                    android:textColor="@color/textPrimary"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <TextView
-                android:id="@+id/btnBack"
-                android:layout_width="wrap_content"
+                style="@style/FormLabel"
+                android:layout_marginTop="18dp"
+                android:text="Foto del perfil (opcional)" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_donate"
-                android:fontFamily="sans-serif-black"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="10dp"
-                android:text="‹ VOLVER"
-                android:textColor="#ffffff"
-                android:textSize="13sp" />
+                android:layout_marginTop="7dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.tvparapobres.app.AvatarView
+                    android:id="@+id/photoPreview"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/btnPhoto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_photobtn"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
+                        android:fontFamily="@font/outfit"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="7dp"
+                        android:text="Subir foto"
+                        android:textColor="@color/accentStrong"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btnPhotoDel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:background="@drawable/bg_photobtn_del"
+                        android:focusable="true"
+                        android:focusableInTouchMode="true"
+                        android:fontFamily="@font/outfit"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="7dp"
+                        android:text="Quitar foto"
+                        android:textColor="@color/redSoft"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
 
             <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_weight="1"
-                android:fontFamily="sans-serif-black"
-                android:text="NUEVO PERFIL"
-                android:textColor="@color/textPrimary"
-                android:textSize="18sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingHorizontal="26dp"
-            android:paddingTop="26dp">
+                style="@style/FormLabel"
+                android:layout_marginTop="15dp"
+                android:text="Nombre del perfil" />
 
             <EditText
                 android:id="@+id/nameInput"
-                android:layout_width="0dp"
-                android:layout_height="54dp"
-                android:layout_weight="1"
-                android:background="@drawable/bg_search"
-                android:fontFamily="sans-serif-medium"
-                android:hint="Nombre del perfil"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_textfield"
+                android:fontFamily="@font/outfit"
+                android:hint="Ej. Mariana"
                 android:inputType="textCapWords"
                 android:maxLength="18"
                 android:maxLines="1"
-                android:paddingHorizontal="16dp"
+                android:paddingHorizontal="13dp"
+                android:paddingVertical="10dp"
                 android:textColor="@color/textPrimary"
                 android:textColorHint="@color/textMuted"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
 
             <TextView
-                android:id="@+id/btnSave"
-                android:layout_width="wrap_content"
-                android:layout_height="54dp"
-                android:layout_marginStart="14dp"
-                android:background="@drawable/bg_donate"
-                android:fontFamily="sans-serif-black"
-                android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:gravity="center"
-                android:paddingHorizontal="24dp"
-                android:text="CREAR"
-                android:textColor="#ffffff"
-                android:textSize="14sp" />
+                style="@style/FormLabel"
+                android:layout_marginTop="15dp"
+                android:text="Color del perfil" />
+
+            <LinearLayout
+                android:id="@+id/paletteRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                style="@style/FormLabel"
+                android:layout_marginTop="15dp"
+                android:text="Avatar" />
+
+            <LinearLayout
+                android:id="@+id/facesRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:orientation="horizontal" />
+
+            <TextView
+                style="@style/FormLabel"
+                android:layout_marginTop="15dp"
+                android:text="PIN (opcional)" />
+
+            <EditText
+                android:id="@+id/pinInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/bg_textfield"
+                android:fontFamily="@font/jetbrains_mono"
+                android:hint="Sin PIN = acceso libre"
+                android:inputType="number"
+                android:maxLength="4"
+                android:maxLines="1"
+                android:paddingHorizontal="13dp"
+                android:paddingVertical="10dp"
+                android:textColor="@color/textPrimary"
+                android:textColorHint="@color/textMuted"
+                android:textSize="15sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="end"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnCancel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="10dp"
+                    android:background="@drawable/bg_ghostbtn"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:fontFamily="@font/outfit"
+                    android:gravity="center"
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="10dp"
+                    android:text="Volver"
+                    android:textColor="@color/textSecondary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnSave"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_donate"
+                    android:focusable="true"
+                    android:focusableInTouchMode="true"
+                    android:fontFamily="@font/outfit"
+                    android:gravity="center"
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="10dp"
+                    android:text="CREAR"
+                    android:textColor="#ffffff"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="26dp"
-            android:paddingTop="22dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="COLOR"
-            android:textColor="@color/textSecondary"
-            android:textSize="12sp" />
-
-        <LinearLayout
-            android:id="@+id/paletteRow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="18dp"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="26dp"
-            android:paddingTop="22dp"
-            android:fontFamily="sans-serif-medium"
-            android:text="PIN OPCIONAL (déjalo vacío para no proteger)"
-            android:textColor="@color/textSecondary"
-            android:textSize="12sp" />
-
-        <EditText
-            android:id="@+id/pinInput"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginHorizontal="26dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_search"
-            android:fontFamily="sans-serif-monospace"
-            android:hint="0000"
-            android:inputType="number"
-            android:maxLength="4"
-            android:maxLines="1"
-            android:paddingHorizontal="16dp"
-            android:textColor="@color/textPrimary"
-            android:textColorHint="@color/textMuted"
-            android:textSize="16sp" />
     </LinearLayout>
 </ScrollView>

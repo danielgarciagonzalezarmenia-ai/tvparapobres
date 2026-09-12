@@ -1,91 +1,286 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/black">
+    android:background="@color/black"
+    android:orientation="vertical">
 
-    <com.google.android.exoplayer2.ui.PlayerView
-        android:id="@+id/playerView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:use_controller="true"
-        app:resize_mode="fit" />
-
-    <TextView
-        android:id="@+id/streamTitle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:background="#cc000000"
-        android:ellipsize="end"
-        android:fontFamily="sans-serif-medium"
-        android:maxLines="1"
-        android:padding="8dp"
-        android:textColor="@color/textPrimary"
-        android:textSize="14sp" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp">
 
-    <TextView
-        android:id="@+id/epgText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|end"
-        android:layout_marginTop="6dp"
-        android:layout_marginEnd="10dp"
-        android:background="#cc000000"
-        android:ellipsize="end"
-        android:fontFamily="sans-serif"
-        android:maxLines="2"
-        android:paddingHorizontal="10dp"
-        android:paddingVertical="6dp"
-        android:textColor="@color/textSecondary"
-        android:textSize="12sp"
-        android:visibility="gone" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_chip"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="11dp"
+            android:paddingVertical="5dp">
+
+            <View
+                android:id="@+id/pulseDot"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:layout_marginEnd="7dp"
+                android:background="@drawable/bg_pulse" />
+
+            <TextView
+                android:id="@+id/chipText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/jetbrains_mono"
+                android:letterSpacing="0.18"
+                android:text="EN VIVO"
+                android:textAllCaps="true"
+                android:textColor="@color/textSecondary"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/streamTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="@font/outfit"
+            android:maxLines="1"
+            android:textColor="@color/textPrimary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/chposView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:fontFamily="@font/jetbrains_mono"
+            android:letterSpacing="0.05"
+            android:textColor="@color/textMuted"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/bottomBar"
         android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:layout_gravity="bottom"
-        android:background="#dd000000"
-        android:paddingHorizontal="18dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#000000">
 
-        <TextView
-            android:id="@+id/btnPrev"
-            android:layout_width="94dp"
+        <com.google.android.exoplayer2.ui.PlayerView
+            android:id="@+id/playerView"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="@drawable/bg_channel_btn"
-            android:fontFamily="sans-serif-black"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
-            android:gravity="center"
-            android:text="‹ CANAL"
-            android:textColor="#ffffff"
-            android:textSize="16sp" />
+            app:resize_mode="fit"
+            app:use_controller="true" />
 
-        <TextView
-            android:id="@+id/btnNext"
-            android:layout_width="94dp"
+        <LinearLayout
+            android:id="@+id/connectOverlay"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="end"
-            android:background="@drawable/bg_channel_btn"
-            android:fontFamily="sans-serif-black"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
+            android:background="#000000"
             android:gravity="center"
-            android:text="CANAL ›"
-            android:textColor="#ffffff"
-            android:textSize="16sp" />
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp">
 
-        <TextView
-            android:id="@+id/chanInfo"
-            android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/dot1"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_marginEnd="7dp"
+                    android:background="@drawable/bg_dot" />
+
+                <View
+                    android:id="@+id/dot2"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:layout_marginEnd="7dp"
+                    android:background="@drawable/bg_dot" />
+
+                <View
+                    android:id="@+id/dot3"
+                    android:layout_width="9dp"
+                    android:layout_height="9dp"
+                    android:background="@drawable/bg_dot" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:fontFamily="@font/outfit"
+                android:text="Conectando a los servidores"
+                android:textColor="@color/textPrimary"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/connectSub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:fontFamily="@font/jetbrains_mono"
+                android:gravity="center"
+                android:letterSpacing="0.1"
+                android:text="PREPARANDO LA SEÑAL, ESTO PUEDE TARDAR UNOS SEGUNDOS"
+                android:textAllCaps="true"
+                android:textColor="@color/textSecondary"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/errorOverlay"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:fontFamily="sans-serif-medium"
+            android:background="#000000"
             android:gravity="center"
-            android:paddingHorizontal="110dp"
-            android:textColor="@color/textPrimary"
-            android:textSize="13sp" />
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif"
+                android:text="⚠"
+                android:textColor="@color/textPrimary"
+                android:textSize="32sp" />
+
+            <TextView
+                android:id="@+id/errorMsg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:fontFamily="@font/outfit"
+                android:gravity="center"
+                android:textColor="#e8e6ee"
+                android:textSize="14sp" />
+        </LinearLayout>
     </FrameLayout>
-</FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/epgBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:background="@drawable/bg_epgbar"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="8dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/epgNowRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/epgNowTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_epg_tag_now"
+                android:fontFamily="@font/jetbrains_mono"
+                android:letterSpacing="0.12"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="2dp"
+                android:text="AHORA"
+                android:textAllCaps="true"
+                android:textColor="#ffffff"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/epgNowTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/outfit"
+                android:maxLines="1"
+                android:textColor="@color/textPrimary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/epgNowAt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/jetbrains_mono"
+                android:textColor="@color/textMuted"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/epgDiv"
+            android:layout_width="1dp"
+            android:layout_height="20dp"
+            android:layout_marginHorizontal="10dp"
+            android:background="@color/lineSoft"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/epgNextRow"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/epgNextTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_epg_tag_next"
+                android:fontFamily="@font/jetbrains_mono"
+                android:letterSpacing="0.12"
+                android:paddingHorizontal="7dp"
+                android:paddingVertical="2dp"
+                android:text="DESPUÉS"
+                android:textAllCaps="true"
+                android:textColor="@color/accentStrong"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/epgNextTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/outfit"
+                android:maxLines="1"
+                android:textColor="@color/textPrimary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/epgNextAt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:fontFamily="@font/jetbrains_mono"
+                android:textColor="@color/textMuted"
+                android:textSize="10sp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

@@ -11,28 +11,20 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
+        android:gravity="center"
         android:orientation="horizontal"
         android:paddingHorizontal="16dp"
         android:paddingTop="18dp"
         android:paddingBottom="6dp">
 
         <ImageView
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="222dp"
+            android:layout_height="48dp"
             android:layout_marginEnd="10dp"
-            android:background="@drawable/bg_brand"
-            android:scaleType="centerInside"
-            android:src="@drawable/ic_brand_tv" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-black"
-            android:letterSpacing="0.1"
-            android:text="TV PARA POBRES"
-            android:textColor="@color/textPrimary"
-            android:textSize="17sp" />
+            android:adjustViewBounds="true"
+            android:contentDescription="TV Para Pobres"
+            android:scaleType="fitCenter"
+            android:src="@drawable/logo_proyecto" />
     </LinearLayout>
 
     <TextView
@@ -73,14 +65,4 @@
         android:text="En el control remoto usa ← → para elegir perfil y OK para entrar.\nLos favoritos y el historial son independientes por perfil."
         android:textColor="@color/textMuted"
         android:textSize="13sp" />
-
-    <TextView
-        android:id="@+id/versionLabel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:paddingBottom="14dp"
-        android:text="v1.2.3"
-        android:textColor="@color/textMuted"
-        android:textSize="11sp" />
 </LinearLayout>
