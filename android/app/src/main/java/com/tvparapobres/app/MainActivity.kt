@@ -78,6 +78,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Si hubo un crash, mostrar el reporte en vez de reintentar a ciegas.
+        try {
+            val crashFile = java.io.File(filesDir, "crash.txt")
+            if (crashFile.exists()) {
+                startActivity(Intent(this, CrashReportActivity::class.java))
+                finish()
+                return
+            }
+        } catch (_: Exception) {
+        }
         setContentView(R.layout.activity_main)
 
         Profiles.init(applicationContext)
